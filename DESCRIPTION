@@ -1,0 +1,13 @@
+Package: DES
+Version: 1.0.0
+Author: Norm Matloff <normmatloff@gmail.com>
+Maintainer: Norm Matloff <normmatloff@gmail.com>
+Date: 2016-1-15
+Title: Discrete Event Simulation
+Description: A DES library for R.
+OS_type: unix
+Imports:
+Suggests:
+LazyLoad: no
+License: GPL (>= 2)
+Repository: CRAN

@@ -1,0 +1,4 @@
+
+export(newsim,insevnt,schedevnt,getnextevnt,mainloop,binsearch,
+   appendfcfs,delfcfs,newqueue) 
+
