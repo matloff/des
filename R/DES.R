@@ -42,6 +42,8 @@
 #                     process it, and update the current simulated
 #                     time
 #       mainloop:  as the name implies
+#       cancel:  cancel a previously-scheduled event
+#       newqueue:  creates a new work queue
 #       appendfcfs:  append job to a FCFS queue
 #       delfcfs:  delete head of a FCFS queue
 
@@ -142,10 +144,18 @@ binsearch <- function(x,y) {
    return(hi+1)
 }
 
-# the functions below assume that queues are represented as matrices,
-# one row per queued job, containing application-specific information
-# about the job; the matrix is assumed stored in an environment, with
-# the matrix being named m
+# removes the specified event from the schedule list
+cancel <- function(rownum,simlist) {
+   evnts <- simlist$evnts
+   simlist$evnts <- rbind(
+      events[1:(rownum-1),],
+      events[(rownum+1:nrow(evnts)),]
+}
+
+# the work queue functions below assume that queues are represented as
+# matrices, one row per queued job, containing application-specific
+# information about the job; the matrix is assumed stored in an
+# environment, with the matrix being named m
 
 # new queue with ncol columns
 newqueue <- function(ncol) {
