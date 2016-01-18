@@ -145,11 +145,11 @@ binsearch <- function(x,y) {
 }
 
 # removes the specified event from the schedule list
-cancel <- function(rownum,simlist) {
+cancelevnt <- function(rownum,simlist) {
    evnts <- simlist$evnts
    simlist$evnts <- rbind(
       events[1:(rownum-1),],
-      events[(rownum+1:nrow(evnts)),]
+      events[(rownum+1:nrow(evnts)),])
 }
 
 # the work queue functions below assume that queues are represented as
@@ -157,7 +157,10 @@ cancel <- function(rownum,simlist) {
 # information about the job; the matrix is assumed stored in an
 # environment, with the matrix being named m
 
-# new queue with ncol columns
+# create and return new queue with ncol columns; the queue is an R
+# environment, with the main component being m, the matrix representing
+# the queue itself; ncol is up to the user, depending on how many pieces
+# of information the user wishes to record about a job
 newqueue <- function(ncol) {
    q <- new.env()
    q$m <- matrix(nrow=0,ncol=ncol)
@@ -165,8 +168,8 @@ newqueue <- function(ncol) {
 }
 
 # appends jobtoqueue to the given queue, assumed of the above form;
-# the new, longer list is returned; jobtoqueue is a vector of length
-# equal to the number of columns in the queue matrix
+# jobtoqueue is a vector of length equal to the number of columns in 
+# the queue matrix
 appendfcfs <- function(queue,jobtoqueue) {
    if (is.null(queue$m)) {
       queue$m <- matrix(jobtoqueue,nrow=1)
@@ -175,8 +178,7 @@ appendfcfs <- function(queue,jobtoqueue) {
    queue$m <- rbind(queue$m,jobtoqueue)
 }
 
-# deletes head of queue; assumes list-of-lists structure as decribed
-# above; returns the head and new queue
+# deletes and returns head of queue
 delfcfs <- function(queue) {
    if (is.null(queue$m)) return(NULL) 
    qhead <- queue$m[1,]

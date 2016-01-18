@@ -1,6 +1,7 @@
-\name{newsim,insevnt,schedevnt,getnextevnt,mainloop,binsearch,newqueue,appendfcfs,delfcfs}
+\name{newsim,insevnt,schedevnt,getnextevnt,mainloop,binsearch,newqueue,appendfcfs,delfcfs,cancelevnt}
 \alias{newsim}
 \alias{insevnt}
+\alias{cancelevnt}
 \alias{schedevnt}
 \alias{getnextevnt}
 \alias{mainloop}
@@ -42,6 +43,97 @@ delfcfs(queue)
   \item{y}{Value searched for.}
   \item{queue}{A queue.}
   \item{jobtoqueue}{Job to be placed in a queue.}
+}
+
+\details{Discrete event simulation, using the event-oriented approach.
+See the PDF files in
+\url{http://heather.cs.ucdavis.edu/~matloff/156/PLN} for an online course
+on DES methods.  Note:  This package is intended as a convenience for R
+users; it is not as fast as C/C++ libraries.
+
+Here is an overview of the functions:
+
+   \itemize{
+
+   \item \code{newsim}:  Creates an R environment, containing the event
+   list, current simulated time and so on, including any
+   application-specific data.
+
+   \item \code{insevnt}:  Inserts an event into the event list.
+
+   \item \code{cancelevnt}:  Removes an event into the event list.
+   Useful for instance for simulating timeout situations.
+
+   \item \code{schedevnt}:  Creates a new event, and then calls
+   \code{insevnt} to insert it.
+
+   \item \code{getnextevnt}:  Removes and returns the earliest event
+   from the event list.
+
+   \item \code{mainloop}:  Called by the application to start the
+   simulation and run until the simulated time exceeds the
+   user-specified time limit.  At each iteration, calls
+   \code{getnextevnt} and invokes the application-specific reaction to
+   the occurred event.  If \code{dbg} is set, then at each iteration the
+   function will enter R \code{browser} mode, printing out the current
+   event and simulated time, and giving the user an opportunity to "take
+   a look around."
+
+   \item \code{newqueue}:  Create a new work queue, an R environment.
+   The main component, \code{m}, is a matrix representing the queue,
+   with number of columns being application-dependent.  The user might
+   add other components, e.g. running totals.
+
+   \item \code{appendfcfs}:  Appends a job to a First Come, First Served
+   queue. The job is represented by a vector to be added as a row in the
+   queue matrix.
+
+   \item \code{delfcfs}:  Deletes and returns the head of an FCFS queue.
+
+   }
+
+Main variables:  These are in the simlist, whose application-ind
+components are:
+
+   \itemize{
+
+   \item \code{currtime}:  Current simulated time.
+
+   \item \code{evnts}:  The list of scheduled events; see below.
+
+   \item \code{reactevnt}:  Event handler, used-defined; see below.
+
+   \item \code{dbg}:  See \code{mainloop} above.
+
+   \item Application-specific variables.
+
+   }
+
+Structure of the event list:  One row for each event, rows ordered by
+event occurrence time.  First two columns are event time and event type
+(user-defined). The remaining columns, if any, contain
+application-specific information.
+
+Event handlers:  These are user-defined.  For example, consider
+simulation of a single-server queue.  When a job arrives, the 
+arrivals event handler will be called (coded by the event type, 
+again user-defined).  It will record the arrival, update any
+application-specific totals, and see if service can be started for this
+job.  If so, the code will schedule an event for completion of the
+service; if not, the code will add the job to the queue.
+
+Outline of typical application code:
+
+\preformatted{
+    mysim <- newsim()    # create the simlist
+    set reactevent in mysim
+    set application-specific variables in mysim, if any
+    set the first event(s) in mysim$evnts
+    mainloop(mysim,mysimtimelim)
+    print results
+}
+
+
 }
 
 \author{
