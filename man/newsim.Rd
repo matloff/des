@@ -41,7 +41,7 @@ delfcfs(queue)
   \item{simtimelim}{Time limit for simulation.}
   \item{x}{Vector to search in.}
   \item{y}{Value searched for.}
-  \item{queue}{A queue.}
+  \item{queue}{A queue.  Must be in a \code{simlist} environment.}
   \item{jobtoqueue}{Job to be placed in a queue.}
 }
 
@@ -114,13 +114,24 @@ event occurrence time.  First two columns are event time and event type
 (user-defined). The remaining columns, if any, contain
 application-specific information.
 
-Event handlers:  These are user-defined.  For example, consider
-simulation of a single-server queue.  When a job arrives, the 
-arrivals event handler will be called (coded by the event type, 
-again user-defined).  It will record the arrival, update any
-application-specific totals, and see if service can be started for this
-job.  If so, the code will schedule an event for completion of the
-service; if not, the code will add the job to the queue.
+Event handlers:  These are user-defined.  The \code{DES} function
+\code{mainloop} will make the call
+
+\code{simlist$reactevent(head, simlist)}
+
+where the user has initially set \code{simlist$reactevent} to his/her
+application-specific code.  Here \code{head} is the event just now
+removed from the head of the event list, and \code{simlist} is the event
+list.  Let's call this function the "event handler," but note that
+within it there are if/else cases, one for each event type.
+
+The For example, consider simulation of a single-server queue.  When a
+job arrives, the arrivals section of the event handler will run (coded
+by the event type, again user-defined).  It will record the arrival,
+update any application-specific totals, and see if service can be
+started for this job.  If so, the code will schedule an event for
+completion of the service; if not, the code will add the job to the
+queue.
 
 Outline of typical application code:
 
