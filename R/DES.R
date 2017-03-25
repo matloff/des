@@ -1,5 +1,6 @@
 
-# DES.R:  R routines for discrete-event simulation (DES), with an example
+# DES.R:  R routines for discrete-event simulation (DES), event-oriented
+# method
 
 # matrix version; data frame allows character event types, but much too slow
 
