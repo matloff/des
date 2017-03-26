@@ -6,9 +6,11 @@
 
 # 1.  No longer keep the event list in sorted order.  Too costly to do
 # insertion, and anyway earliest event can be determined via which.min(),
-# a C-level function that should be much faster.
+# a C-level function that should be much faster.  
 
-# matrix version; data frame allows character event types, but much too slow
+# 2.  In old version, used matrix instead of data frame, as latter was
+# quite slow.  Probably should go back to data frame, but for now, at
+# least add meaningful column names and use them.
 
 # all data is stored in an R environment variable that will be referrred
 # to as simlist below; an environment variable is used so that functions
@@ -37,17 +39,14 @@
 #    event type (user-defined numeric code, e.g. 1 for arrival, 2 for 
 #       job completion, etc.)
 #    application-specific information, if any
-#
-# the rows of the matrix are ordered by event time
 
 # library functions 
 # 
 #       newsim:  create a new simlist
-#       insevnt:  insert a new event into simlist$evnts 
-#       schedevnt:  schedule a new event (calls insevnt())
+#       schedevnt:  schedule a new event 
 #       getnextevnt:  pulls the earliest event from the event set,
-#                     process it, and update the current simulated
-#                     time
+#                     updates the current simulated time, and 
+#                     processes this event
 #       mainloop:  as the name implies
 #       cancel:  cancel a previously-scheduled event
 #       newqueue:  creates a new work queue
@@ -56,7 +55,7 @@
 
 # event list:
 
-#    matrix in simlist
+#    a matrix in simlist
 #    one row for each event, rows NOT ordered by event occurrence time
 #    first two cols are event time, event time, then app-specific info
 
