@@ -2,6 +2,12 @@
 # DES.R:  R routines for discrete-event simulation (DES), event-oriented
 # method
 
+# March 2017 major changes
+
+# 1.  No longer keep the event list in sorted order.  Too costly to do
+# insertion, and anyway earliest event can be determined via which.min(),
+# a C-level function that should be much faster.
+
 # matrix version; data frame allows character event types, but much too slow
 
 # all data is stored in an R environment variable that will be referrred
@@ -51,7 +57,7 @@
 # event list:
 
 #    matrix in simlist
-#    one row for each event, rows ordered by event occurrence time
+#    one row for each event, rows NOT ordered by event occurrence time
 #    first two cols are event time, event time, then app-specific info
 
 # outline of a typical application:
@@ -72,41 +78,52 @@ newsim <- function(dbg=FALSE) {
    simlist
 }
 
-# insert event evnt into simlist$evnts
-insevnt <- function(evnt,simlist) {
-   # if the event set is empty, set it to consist of evnt and return
-   if (is.null(simlist$evnts)) {
-      simlist$evnts <- matrix(evnt,nrow=1)
-      return()
-   }
-   # otherwise, find insertion point
-   inspt <- binsearch(simlist$evnts[,1],evnt[1])
-   # now "insert," by reconstructing the matrix; we find what portion of
-   # the current matrix should come before evnt and what portion should 
-   # come after it, then string everything together
-   before <- if (inspt == 1) NULL else simlist$evnts[1:(inspt-1),]
-   nr <- nrow(simlist$evnts)
-   after <- if (inspt <= nr) simlist$evnts[inspt:nr,] else NULL  
-   simlist$evnts <- rbind(before,evnt,after)  
-   rownames(simlist$evnts) <- NULL
-}
+# no longer used; see March 2017 above
+# # insert event evnt into simlist$evnts
+# insevnt <- function(evnt,simlist) {
+#    # if the event set is empty, set it to consist of evnt and return
+#    if (is.null(simlist$evnts)) {
+#       simlist$evnts <- matrix(evnt,nrow=1)
+#       return()
+#    }
+#    # otherwise, find insertion point
+#    inspt <- binsearch(simlist$evnts[,1],evnt[1])
+#    # now "insert," by reconstructing the matrix; we find what portion of
+#    # the current matrix should come before evnt and what portion should 
+#    # come after it, then string everything together
+#    before <- if (inspt == 1) NULL else simlist$evnts[1:(inspt-1),]
+#    nr <- nrow(simlist$evnts)
+#    after <- if (inspt <= nr) simlist$evnts[inspt:nr,] else NULL  
+#    simlist$evnts <- rbind(before,evnt,after)  
+#    rownames(simlist$evnts) <- NULL
+# }
 
 # schedule new event in simlist$evnts; evnttime is the time at
 # which the event is to occur; evnttype is the event type; appdata is
 # a vector of numerical application-specific data
 schedevnt <- function(evnttime,evnttype,simlist,appdata=NULL) {
    evnt <- c(evnttime,evnttype,appdata)
-   insevnt(evnt,simlist)  
+   # insevnt(evnt,simlist)  
+   simlist$evnts <- rbind(simlist$evnts,evnt)
 }
 
 # start to process next event (second half done by application
 # programmer via call to reactevnt() from mainloop())
 getnextevnt <- function(simlist) {
-   head <- simlist$evnts[1,]
+   # find earliest event
+   earliest <- which.min(simlist$evnts[,1])
+   head <- simlist$evnts[earliest,]
    # delete head
-   if (nrow(simlist$evnts) == 1) simlist$evnts <- NULL else 
-      simlist$evnts <- simlist$evnts[-1,,drop=F]  
+   # if (nrow(simlist$evnts) == 1) simlist$evnts <- NULL else 
+   #    simlist$evnts <- simlist$evnts[-1,,drop=F]  
+   # simlist$evnts <- simlist$evnts[-earliest,,drop=F]  
+   delevnt(earliest,simlist)
    return(head)
+}
+
+# removes event in row i of event list
+delevnt <- function(i,simlist) {
+   simlist$evnts <- simlist$evnts[-i,,drop=F]  
 }
 
 # main loop of the simulation
@@ -127,30 +144,28 @@ mainloop <- function(simlist,simtimelim) {
    }
 }
 
-# binary search of insertion point of y in the sorted vector x; returns
-# the position in x before which y should be inserted, with the value
-# length(x)+1 if y is larger than x[length(x)]; this could be replaced
-# by faster C code
-binsearch <- function(x,y) {
-   n <- length(x)
-   lo <- 1
-   hi <- n
-   while(lo+1 < hi) {
-      mid <- floor((lo+hi)/2)
-      if (y == x[mid]) return(mid)
-      if (y < x[mid]) hi <- mid else lo <- mid
-   }
-   if (y <= x[lo]) return(lo)
-   if (y < x[hi]) return(hi)
-   return(hi+1)
-}
+# no longer used; see "March 17" at top of this file
+## # binary search of insertion point of y in the sorted vector x; returns
+## # the position in x before which y should be inserted, with the value
+## # length(x)+1 if y is larger than x[length(x)]; this could be replaced
+## # by faster C code
+## binsearch <- function(x,y) {
+##    n <- length(x)
+##    lo <- 1
+##    hi <- n
+##    while(lo+1 < hi) {
+##       mid <- floor((lo+hi)/2)
+##       if (y == x[mid]) return(mid)
+##       if (y < x[mid]) hi <- mid else lo <- mid
+##    }
+##    if (y <= x[lo]) return(lo)
+##    if (y < x[hi]) return(hi)
+##    return(hi+1)
+## }
 
 # removes the specified event from the schedule list
 cancelevnt <- function(rownum,simlist) {
-   evnts <- simlist$evnts
-   simlist$evnts <- rbind(
-      events[1:(rownum-1),],
-      events[(rownum+1:nrow(evnts)),])
+   delevnt(rownum,simlist)
 }
 
 # the work queue functions below assume that queues are represented as
