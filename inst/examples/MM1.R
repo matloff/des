@@ -5,7 +5,7 @@
 mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
 
    # set up structures
-   simlist <- newsim(dbg)
+   simlist <- newsim(appcols=c('arrvtime','srvtime'),dbg)
    simlist$reactevent <- mm1react  
    simlist$arrvrate <- 1 / meaninterarrv
    simlist$srvrate <- 1 / meansrv
@@ -49,7 +49,7 @@ incremjobnum <- function(simlist) {
 
 # what new events are triggered by the occurrence of an old one?
 mm1react <- function(evnt,simlist) {
-   etype <- evnt[2]
+   etype <- evnt['evnttype']
    if (etype == simlist$arrvevnt) {  # job arrival
       # schedule next arrival
       timeofnextarrival <- simlist$currtime + rexp(1,simlist$arrvrate)

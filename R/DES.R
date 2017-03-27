@@ -4,7 +4,7 @@
 
 # March 2017 major changes
 
-# 1.  No longer keep the event list in sorted order.  Too costly to do
+# 1.  No longer keep the event set in sorted order.  Too costly to do
 # insertion, and anyway earliest event can be determined via which.min(),
 # a C-level function that should be much faster.  
 
@@ -53,7 +53,7 @@
 #       appendfcfs:  append job to a FCFS queue
 #       delfcfs:  delete head of a FCFS queue
 
-# event list:
+# event set:
 
 #    a matrix in simlist
 #    one row for each event, rows NOT ordered by event occurrence time
@@ -68,11 +68,13 @@
 #    mainloop(mysim,mysimtimelim)
 #    print results
 
-# create a simlist, which will be the return value, an R environment
-newsim <- function(dbg=FALSE) {
+# create a simlist, which will be the return value, an R environment;
+# appcols is the vector of names for the application-specific columns
+newsim <- function(appcols=NULL,dbg=FALSE) {
    simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
-   simlist$evnts <- NULL  # event set
+   simlist$evnts <- matrix(nrow=0,ncol=2+length(appcols))  # event set
+   colnames(simlist$evnts) <- c('evnttime','evnttype',appcols)
    simlist$dbg <- dbg
    simlist
 }
@@ -120,7 +122,7 @@ getnextevnt <- function(simlist) {
    return(head)
 }
 
-# removes event in row i of event list
+# removes event in row i of event set
 delevnt <- function(i,simlist) {
    simlist$evnts <- simlist$evnts[-i,,drop=F]  
 }
@@ -130,7 +132,7 @@ mainloop <- function(simlist,simtimelim) {
    while(simlist$currtime < simtimelim) {
       head <- getnextevnt(simlist)  
       # update current simulated time
-      simlist$currtime <- head[1]  
+      simlist$currtime <- head['evnttime']  
       # process this event (programmer-supplied ftn)
       simlist$reactevent(head,simlist)  
       if (simlist$dbg) {
