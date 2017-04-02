@@ -1,4 +1,4 @@
 
-export(newsim,insevnt,schedevnt,getnextevnt,mainloop,binsearch,
+export(newsim,schedevnt,getnextevnt,mainloop,
    cancelevnt,appendfcfs,delfcfs,newqueue) 
 
