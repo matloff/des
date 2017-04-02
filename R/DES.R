@@ -55,9 +55,9 @@
 
 # event set:
 
-#    a matrix in simlist
-#    one row for each event, rows NOT ordered by event occurrence time
-#    first two cols are event time, event time, then app-specific info
+#    matrix in simlist
+#    one row for each event, rows ordered by event occurrence time
+#    first two cols are event time, event type, then app-specific info
 
 # outline of a typical application:
 
