@@ -19,7 +19,7 @@ Main simulation routines.
 }
 
 \usage{
-newsim(dbg=FALSE)
+newsim(appcols=NULL,dbg=FALSE) 
 insevnt(evnt,simlist)
 schedevnt(evnttime,evnttype,simlist,appdata=NULL)
 getnextevnt(simlist)
