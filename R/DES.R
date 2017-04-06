@@ -71,36 +71,22 @@
 # create a simlist, which will be the return value, an R environment;
 # appcols is the vector of names for the application-specific columns;
 # maxevsetrows is the maximum number of rows needed for the event set
-newsim <- function(evsetrows,appcols=NULL,dbg=FALSE) {
+newsim <- function(evsetrows,appcols=NULL,dbg=FALSE,bigmem=FALSE) {
+   require(bigmemory)
    simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
-   simlist$evnts <- matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
+   if (!bigmem) {
+      simlist$evnts <- 
+         matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
+   } else simlist$evnts <- 
+      big.matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
+   options(bigmemory.allow.dimnames=TRUE)
    colnames(simlist$evnts) <- c('evnttime','evnttype',appcols)
    simlist$emptyrow <- 1  # row index at which new event can be placed
    simlist$evnts[,1] <- Inf
    simlist$dbg <- dbg
    simlist
 }
-
-# no longer used; see March 2017 above
-# # insert event evnt into simlist$evnts
-# insevnt <- function(evnt,simlist) {
-#    # if the event set is empty, set it to consist of evnt and return
-#    if (is.null(simlist$evnts)) {
-#       simlist$evnts <- matrix(evnt,nrow=1)
-#       return()
-#    }
-#    # otherwise, find insertion point
-#    inspt <- binsearch(simlist$evnts[,1],evnt[1])
-#    # now "insert," by reconstructing the matrix; we find what portion of
-#    # the current matrix should come before evnt and what portion should 
-#    # come after it, then string everything together
-#    before <- if (inspt == 1) NULL else simlist$evnts[1:(inspt-1),]
-#    nr <- nrow(simlist$evnts)
-#    after <- if (inspt <= nr) simlist$evnts[inspt:nr,] else NULL  
-#    simlist$evnts <- rbind(before,evnt,after)  
-#    rownames(simlist$evnts) <- NULL
-# }
 
 # schedule new event in simlist$evnts; evnttime is the time at
 # which the event is to occur; evnttype is the event type; appdata is
