@@ -5,7 +5,7 @@
 mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
 
    # set up structures
-   simlist <- newsim(appcols=c('arrvtime','srvtime'),dbg)
+   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg)
    simlist$reactevent <- mm1react  
    simlist$arrvrate <- 1 / meaninterarrv
    simlist$srvrate <- 1 / meansrv

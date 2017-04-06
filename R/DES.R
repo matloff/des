@@ -69,12 +69,15 @@
 #    print results
 
 # create a simlist, which will be the return value, an R environment;
-# appcols is the vector of names for the application-specific columns
-newsim <- function(appcols=NULL,dbg=FALSE) {
+# appcols is the vector of names for the application-specific columns;
+# maxevsetrows is the maximum number of rows needed for the event set
+newsim <- function(evsetrows,appcols=NULL,dbg=FALSE) {
    simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
-   simlist$evnts <- matrix(nrow=0,ncol=2+length(appcols))  # event set
+   simlist$evnts <- matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
    colnames(simlist$evnts) <- c('evnttime','evnttype',appcols)
+   simlist$emptyrow <- 1  # row index at which new event can be placed
+   simlist$evnts[,1] <- Inf
    simlist$dbg <- dbg
    simlist
 }
@@ -104,8 +107,12 @@ newsim <- function(appcols=NULL,dbg=FALSE) {
 # a vector of numerical application-specific data
 schedevnt <- function(evnttime,evnttype,simlist,appdata=NULL) {
    evnt <- c(evnttime,evnttype,appdata)
-   # insevnt(evnt,simlist)  
-   simlist$evnts <- rbind(simlist$evnts,evnt)
+   if (is.na(simlist$emptyrow)) {
+      erow <- which(simlist$evnts[,1] == Inf)[1]
+      simlist$emptyrow <- erow
+   }
+   simlist$evnts[simlist$emptyrow,] <- evnt
+   simlist$emptyrow <- NA
 }
 
 # start to process next event (second half done by application
@@ -114,17 +121,15 @@ getnextevnt <- function(simlist) {
    # find earliest event
    earliest <- which.min(simlist$evnts[,1])
    head <- simlist$evnts[earliest,]
-   # delete head
-   # if (nrow(simlist$evnts) == 1) simlist$evnts <- NULL else 
-   #    simlist$evnts <- simlist$evnts[-1,,drop=F]  
-   # simlist$evnts <- simlist$evnts[-earliest,,drop=F]  
    delevnt(earliest,simlist)
    return(head)
 }
 
 # removes event in row i of event set
 delevnt <- function(i,simlist) {
-   simlist$evnts <- simlist$evnts[-i,,drop=F]  
+   # simlist$evnts <- simlist$evnts[-i,,drop=F]  
+   simlist$evnts[i,1] <- Inf
+   simlist$emptyrow <- i
 }
 
 # main loop of the simulation
