@@ -2,10 +2,10 @@
 # test; M/M/1 queue -- exponential ("Markov") job interarrivals,
 # exponential service times, 1 server
 
-mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE,bigmem=FALSE) {
+mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
 
    # set up structures
-   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg,bigmem)
+   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg)
    simlist$reactevent <- mm1react  
    simlist$arrvrate <- 1 / meaninterarrv
    simlist$srvrate <- 1 / meansrv

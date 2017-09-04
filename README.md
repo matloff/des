@@ -17,6 +17,11 @@ how this works, consider a classic specific, the M/M/1 queue:  Interjob
 arrival times and job service times are exponentially distributed, and
 there is 1 server.
 
+The file **inst/examples/MM1.R** in the package simulates this system. 
+The functions in that file are thus application-specific, and we will
+refer to them as *user-supplied*.  They call **DES** functions, which we
+will refer to as *package functions*.
+
 Here there are two kinds of events, job arrival and job completion.
 Think about how the system reacts to an arrival:
 
@@ -25,10 +30,10 @@ Think about how the system reacts to an arrival:
 
 2. Wait for the next arrival.
 
-In **DES**, one could code these as follows.  (This is from the file
-**inst/examples/MM1.R** in the package.) We have named the
-application-specific reaction function **mm1react**.  **DES**
-requires that it have the call form
+
+We have named the
+application-specific reaction function **mm1react**.  **DES** requires
+that it have the call form
 
 ```R
 mm1react(evnt,simlist)
