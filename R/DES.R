@@ -71,16 +71,11 @@
 # create a simlist, which will be the return value, an R environment;
 # appcols is the vector of names for the application-specific columns;
 # maxevsetrows is the maximum number of rows needed for the event set
-newsim <- function(evsetrows,appcols=NULL,dbg=FALSE,bigmem=FALSE) {
-   require(bigmemory)
+newsim <- function(evsetrows,appcols=NULL,dbg=FALSE) {
    simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
-   if (!bigmem) {
-      simlist$evnts <- 
-         matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
-   } else simlist$evnts <- 
-      big.matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
-   options(bigmemory.allow.dimnames=TRUE)
+   simlist$evnts <- 
+      matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
    colnames(simlist$evnts) <- c('evnttime','evnttype',appcols)
    simlist$emptyrow <- 1  # row index at which new event can be placed
    simlist$evnts[,1] <- Inf
