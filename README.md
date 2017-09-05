@@ -1,26 +1,31 @@
-# DES
-Discrete-Event Simulation in R
+# The DES Package: Discrete-Event Simulation in R
+
+## What is discrete-event simulation?
 
 *Discrete event simulation* refers to the simulation of systems that
 have abrupt, i.e. discrete, changes. In a queuing system, for instance,
 when a new job arrives, the queue length abruptly increases by 1.
 
-The package here, **DES**, is not the fastest. I recommend the
+## What is the DES package?
+
+The DES package here, **DES**, is not the fastest. I recommend the
 [excellent **simmer** package](https://cran.rstudio.com/web/packages/simmer/index.html) 
 if speed is an issue.  On the other hand, **DES** is much easier to 
 learn (good for teaching, for instance), and gives the programmer 
 more control, thus making simulation of some systems easier to program.
-
 The package uses the *event-oriented* approach, which means the
-programmer codes how the system reacts to any specific event.  To see
-how this works, consider a classic specific, the M/M/1 queue:  Interjob
-arrival times and job service times are exponentially distributed, and
-there is 1 server.
+programmer codes how the system reacts to any specific event.  
+
+## Example:  M/M/1 queue
+
+To see how event-oriented simulation works, consider a classic example,
+the M/M/1 queue:  Interjob arrival times and job service times are
+exponentially distributed, and there is 1 server.
 
 The file **inst/examples/MM1.R** in the package simulates this system. 
 The functions in that file are thus application-specific, and we will
 refer to them as *user-supplied*.  They call **DES** functions, which we
-will refer to as *package functions*.  The user-supplied wrapper that runs 
+will refer to as *package functions*.  The *user-supplied wrapper* that runs 
 the simulation is named **mm1** here.
 
 Here there are two kinds of events, job arrival and job completion.
@@ -31,8 +36,13 @@ Think about how the system reacts to an arrival:
 
 2. Wait for the next arrival.
 
-The general information about the simulation is contained in the sim
-list, which **mm1** not surprisingly has named **simlist**.  Here are
+What about reaction to a job service completion?
+
+1. If the queue is nonempty, remove the head and start service for that
+   job.
+
+The general information about the simulation is contained in the *sim
+list*, which **mm1** not surprisingly has named **simlist**.  Here are
 the first few lines:
 
 ```R
@@ -48,7 +58,7 @@ mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
 ```
 
 The package function **newsim** initializes the simulation, particularly
-the *sim list*.  The lines we see above are setting application-specific
+the sim list.  The lines we see above are setting application-specific
 information in the sim list, such as the arrival and service rates.  
 
 We will explain the other application-specific components shortly, but
@@ -56,37 +66,54 @@ first note that the call to **newsim** also initializes non-application
 specific components of the sim list, such as **simlist$currtime**, the
 current simulated time, initialized to 0.0.  
 
-Another non-application specific component of the sim list is the *event
-set*, **simlist$evnts**, which we will discuss now.  This is, as the
-name implies, the set of pending events.  At any given time we will have
-an arrival pending, and possible a pending service.  If we were
-simulating a system with k servers, we would have up to k service events
-pending.
+A key non-application specific component of the sim list is the *event
+set*, **simlist$evnts**, a matrix which we will discuss now.  This is,
+as the name implies, the set of pending events.  At any given time we
+will have an arrival pending, and possibly a pending service.  
+
+You can easily imagine generalizations.  Say we are simulating a system
+with k servers, with two job categories having separate queues, priority
+given to queue 1.  Then we would always have two arrivals pending, and
+have up to k service events pending.
+
+Or, think of a machine repair model, with m machines and r
+repairpersons.  Each machine alternately goes through up and down
+cycles, with random up times and random repair times.  Suppose m > r and
+currently i > r machines are down.  Then all r repairpersons will be
+busy, with r pending service completion events, and the m-i machines
+currently up have m-i breakdown events pending.
 
 There will be one row in the event set for each pending event.  The row
 will contain the simulated time at which the event is to occur, and the
-event type (in this example, arrival or service completion).  It will
-also contain optional application-specific information, which in our
-call to **newsim** we have specified as the arrival time of the job and
-the service time it requires.
+event type (in the M/M/1 example, arrival or service completion).  The
+row will also contain optional application-specific information, which
+in our call to **newsim** we have specified as the arrival time of the
+job and the service time it requires.
 
-The core operation of the package then works as follows:  The package
-function **mainloop** will repeatedly loop, with each iteration handling
-the earliest event in the event set.  That event will be removed from
-the set, and a user-supplied *reaction function* will be called to
-process the event.  In that processing, the reaction function will
-typically add one or more new events to the event set.
+A user-supplied *reaction function* will be called to process each event
+when it uoccurs.  The core function of the package**mainloop**, then
+works as follows:  
 
-We have named the application-specific reaction function **mm1react**.
+```
+while simulated time < time limit do
+   remove earliest event from the event set
+   call the user-supplied reaction function with this event
+```
+
+The reaction function will typically add one or more new events to the
+event set.
+
+We have named the user-supplied reaction function **mm1react**.
 **DES** requires that it have the call form
 
 ```R
 mm1react(evnt,simlist)
 ```
 
-The **DES** object **evnt** carrying information about a simulated event
-that has just occurred, and **simlist** is a **DES** object giving all
-the information about the simulation.  The first two lines 
+Note carefully that the entity that calls **mm1react** is the package
+function **mainloop**.  The argument **evnt** will be the row that the
+latter function has just removed from the event set.  The first two
+lines 
 
 ```R
 etype <- evnt['evnttype']
@@ -113,43 +140,55 @@ if (!simlist$srvrbusy) {  # server free, start job service
 }
 ```
 
-That first line simulates the time of the next arrival.  The component
-**currtime** contains the current simulated time, and we generate a
-random time until the next arrival.  The call to the built-in **DES**
-function **schedevnt** then adds this new arrival to the **DES** event
-list.  It's always nice in this kind of simulation to assign an ID to
-each job, hence our inclusion of a job number here.
+That first line simulates the time of the next arrival.  The call to the
+package function **schedevnt** then adds this pending new arrival to the
+event set.  It's always nice in this kind of simulation to assign an ID
+to each job, hence our inclusion of a job number here.
 
-Before looking at the rest of the above code, let's talk briefly about
-the **DES** internal structure.  The key data structure is the event
-list, each row of which stores a pending event.  The call to
-**schedevnt** above adds a new row for that event.  Each row has the
-form
-
-<pre>
-occurrence time
-event type (user-defined code, e.g. 1 for arrival, 2 for 
-   job completion, etc.)
-application-specific information, if any
-</pre>
-
-An example of application-specific information is **jobnum** above.
-
-What the **DES** main loop does, then, is that in each iteration it
-finds the next event, i.e. the one with the earliest event time.  It
-removes that event from the event list, and then calls the user-supplied
-reaction function, which is **mm1react** in our example here.  The
-reaction function then reacts!  Typically that function will generate
-one or more new events, adding them to the event list via a call to
-**schedevnt**.
 
 Now returning to the above code, it checks whether the server is busy.
 If not, then the newly-arrived job can start service.  A random service
 time is generated, and **schedevnt** is called to add this new service
-completion event to the event list.  On the other hand, if the server is
+completion event to the event set.  On the other hand, if the server is
 busy, we add the newly-arrived job to the queue, via a call to the
-**DES** function **appendfcfs**.
+package function **appendfcfs**.
+
+Well, then, how does **mainloop** itself get started?  It is called by
+the user-defined wrapper, in this case **mm1**:
+
+```R
+mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
+   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg)
+   simlist$reactevent <- mm1react
+   ...
+   # set up and schedule first event, including info on this job's 
+   # arrival time for later use in finding mean wait until job done
+   timeto1starrival <- rexp(1,simlist$arrvrate)
+   jobnum <- incremjobnum(simlist)
+   schedevnt(timeto1starrival,simlist$arrvevnt,simlist,
+      c(timeto1starrival,jobnum))
+   # start sim
+   mainloop(simlist,timelim)
+   ...
+````
+
+The wrapper sets up the first event, adding it to the event list, then
+calls **mainloop**.
+
+So, to simulate an M/M/1 queue with mean interarrival and service times
+1.0 and 0.5, over a simulated time range of 10000.0, we would execute
+
+```R
+> mm1(1,0.5,10000)
+```
+
+## Process-oriented DES
 
 All this is how event-oriented systems work.  *Process-oriented* systems
+such as **simmer** (which is modeled on the Python library
+[**SimPy**](https://simpy.readthedocs.io/en/latest/)) 
 are very similar to the above, except that there would not be code to
-generate the next arrival upon the occurrence of one arrival.
+generate the next arrival upon the occurrence of one arrival.  Instead,
+there would be two *processes*, one for arrivals and one for the server.
+If you are familiar with OS threads, each process here is similar to a
+thread.
