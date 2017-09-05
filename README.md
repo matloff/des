@@ -9,7 +9,7 @@ The package here, **DES**, is not the fastest. I recommend the
 [excellent **simmer** package](https://cran.rstudio.com/web/packages/simmer/index.html) 
 if speed is an issue.  On the other hand, **DES** is much easier to 
 learn (good for teaching, for instance), and gives the programmer 
-more control.
+more control, thus making simulation of some systems easier to program.
 
 The package uses the *event-oriented* approach, which means the
 programmer codes how the system reacts to any specific event.  To see
@@ -20,7 +20,8 @@ there is 1 server.
 The file **inst/examples/MM1.R** in the package simulates this system. 
 The functions in that file are thus application-specific, and we will
 refer to them as *user-supplied*.  They call **DES** functions, which we
-will refer to as *package functions*.
+will refer to as *package functions*.  The user-supplied wrapper that runs 
+the simulation is named **mm1** here.
 
 Here there are two kinds of events, job arrival and job completion.
 Think about how the system reacts to an arrival:
@@ -30,10 +31,54 @@ Think about how the system reacts to an arrival:
 
 2. Wait for the next arrival.
 
+The general information about the simulation is contained in the sim
+list, which **mm1** not surprisingly has named **simlist**.  Here are
+the first few lines:
 
-We have named the
-application-specific reaction function **mm1react**.  **DES** requires
-that it have the call form
+```R
+mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
+   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg)
+   simlist$reactevent <- mm1react
+   simlist$arrvrate <- 1 / meaninterarrv
+   simlist$srvrate <- 1 / meansrv
+   simlist$totjobs <- 0
+   simlist$totwait <- 0.0
+   simlist$queue <- newqueue(4)
+   simlist$srvrbusy <- FALSE
+```
+
+The package function **newsim** initializes the simulation, particularly
+the *sim list*.  The lines we see above are setting application-specific
+information in the sim list, such as the arrival and service rates.  
+
+We will explain the other application-specific components shortly, but
+first note that the call to **newsim** also initializes non-application
+specific components of the sim list, such as **simlist$currtime**, the
+current simulated time, initialized to 0.0.  
+
+Another non-application specific component of the sim list is the *event
+set*, **simlist$evnts**, which we will discuss now.  This is, as the
+name implies, the set of pending events.  At any given time we will have
+an arrival pending, and possible a pending service.  If we were
+simulating a system with k servers, we would have up to k service events
+pending.
+
+There will be one row in the event set for each pending event.  The row
+will contain the simulated time at which the event is to occur, and the
+event type (in this example, arrival or service completion).  It will
+also contain optional application-specific information, which in our
+call to **newsim** we have specified as the arrival time of the job and
+the service time it requires.
+
+The core operation of the package then works as follows:  The package
+function **mainloop** will repeatedly loop, with each iteration handling
+the earliest event in the event set.  That event will be removed from
+the set, and a user-supplied *reaction function* will be called to
+process the event.  In that processing, the reaction function will
+typically add one or more new events to the event set.
+
+We have named the application-specific reaction function **mm1react**.
+**DES** requires that it have the call form
 
 ```R
 mm1react(evnt,simlist)
