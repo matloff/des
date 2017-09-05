@@ -41,6 +41,8 @@ What about reaction to a job service completion?
 1. If the queue is nonempty, remove the head and start service for that
    job.
 
+### Basic structures: the sim list and event set
+
 The general information about the simulation is contained in the *sim
 list*, which **mm1** not surprisingly has named **simlist**.  Here are
 the first few lines:
@@ -60,6 +62,9 @@ mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
 The package function **newsim** initializes the simulation, particularly
 the sim list.  The lines we see above are setting application-specific
 information in the sim list, such as the arrival and service rates.  
+Note too the initialization of the "bookkeeping" variables **totjobs**
+and **totwai**, which we need to find the mean queue wait at the end of
+the simulation.
 
 We will explain the other application-specific components shortly, but
 first note that the call to **newsim** also initializes non-application
@@ -90,9 +95,11 @@ row will also contain optional application-specific information, which
 in our call to **newsim** we have specified as the arrival time of the
 job and the service time it requires.
 
+### User-suppplied reaction function and package function **mainloop**:
+
 A user-supplied *reaction function* will be called to process each event
-when it uoccurs.  The core function of the package**mainloop**, then
-works as follows:  
+when it uoccurs.  The core function of the package function
+**mainloop**, then works as follows:  
 
 ```
 while simulated time < time limit do
@@ -101,7 +108,11 @@ while simulated time < time limit do
 ```
 
 The reaction function will typically add one or more new events to the
-event set.
+event set.  In **mm1**, for instance, if the reaction function is given
+an arrival event, it will generate the next arrival event, and add it to
+the event set. And if the current arrival occurs when the server is
+free, it will add a job service service completion event tp the event
+set.
 
 We have named the user-supplied reaction function **mm1react**.
 **DES** requires that it have the call form
@@ -153,6 +164,28 @@ completion event to the event set.  On the other hand, if the server is
 busy, we add the newly-arrived job to the queue, via a call to the
 package function **appendfcfs**.
 
+And what happens when a job service completion occurs?  Here is the
+relevant portion of the code from **mm1**:
+
+```R
+} else if (etype == simlist$srvevnt) {  # job completion
+   # bookkeeping
+   simlist$totjobs <- simlist$totjobs + 1
+   # wait time = job completion time - job arrival time
+   simlist$totwait <- simlist$totwait + simlist$currtime - evnt[3]
+   simlist$srvrbusy <- FALSE
+   # check queue for waiting jobs
+   if (nrow(simlist$queue$m) > 0) {  # nonempty queue
+      qhead <- delfcfs(simlist$queue)
+      # start job service
+      simlist$srvrbusy <- TRUE
+      srvduration <- rexp(1,simlist$srvrate)
+      schedevnt(simlist$currtime+srvduration,simlist$srvevnt,simlist,
+         qhead[3:4])
+   }
+}
+
+
 Well, then, how does **mainloop** itself get started?  It is called by
 the user-defined wrapper, in this case **mm1**:
 
@@ -181,6 +214,10 @@ So, to simulate an M/M/1 queue with mean interarrival and service times
 ```R
 > mm1(1,0.5,10000)
 ```
+
+## Other functions
+
+
 
 ## Process-oriented DES
 

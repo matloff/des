@@ -57,7 +57,8 @@
 
 #    matrix in simlist
 #    one row for each event, rows ordered by event occurrence time
-#    first two cols are event time, event type, then app-specific info
+#    first two cols are event time, event type, then app-specific info,
+#       if any
 
 # outline of a typical application:
 
@@ -164,9 +165,10 @@ cancelevnt <- function(rownum,simlist) {
 # environment, with the main component being m, the matrix representing
 # the queue itself; ncol is up to the user, depending on how many pieces
 # of information the user wishes to record about a job
-newqueue <- function(ncol) {
+newqueue <- function(simlist) {
+   if (is.null(simlist$evnts)) stop('no event set')
    q <- new.env()
-   q$m <- matrix(nrow=0,ncol=ncol)
+   q$m <- matrix(nrow=0,ncol=ncol(simlist$evnts))
    q
 }
 

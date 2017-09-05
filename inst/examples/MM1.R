@@ -11,7 +11,7 @@ mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
    simlist$srvrate <- 1 / meansrv
    simlist$totjobs <- 0
    simlist$totwait <- 0.0
-   simlist$queue <- newqueue(4)
+   simlist$queue <- newqueue(simlist)
    simlist$srvrbusy <- FALSE
    # defining job numbers is good practice, always invaluable during
    # debugging
