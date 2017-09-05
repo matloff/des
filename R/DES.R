@@ -66,7 +66,7 @@
 #    set reactevent in mysim
 #    set application-specific variables in mysim, if any
 #    set the first event(s) in mysim$evnts
-#    mainloop(mysim,mysimtimelim)
+#    mainloop(mysim)
 #    print results
 
 # create a simlist, which will be the return value, an R environment;
@@ -115,7 +115,8 @@ delevnt <- function(i,simlist) {
 }
 
 # main loop of the simulation
-mainloop <- function(simlist,simtimelim) {
+mainloop <- function(simlist) {
+   simtimelim <- simlist$timelim
    while(simlist$currtime < simtimelim) {
       head <- getnextevnt(simlist)  
       # update current simulated time
@@ -191,3 +192,35 @@ delfcfs <- function(queue) {
    qhead
 }
 
+# in many cases, we have exponential interarrivals that occur
+# independently of the rest of the system; this function generates all
+# arrivals at the outset, placing them in the event set
+exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
+   es <- simlist$evnts
+   cn <- colnames(es)
+   if (cn[3] != 'arrvtime') stop('col 3 must be "arrvtime"')
+   if (cn[4] != 'jobnum') stop('col 3 must be "jobnum"')
+   erate <- 1 / meaninterarr
+   s <- 0
+   allarvs <- NULL
+   while(s < simlist$timelim) {
+      arvs <- rexp(batchsize,erate)
+      s <- s + sum(arvs)
+      allarvs <- c(allarvs,arvs)
+   }
+   # may have overshot the mark
+   cuallarvs <- cumsum(allarvs)
+   allarvs <- allarvs[cuallarvs <= simlist$timelim]
+   nallarvs <- length(allarvs)
+   cuallarvs <- cuallarvs[1:nallarvs]
+   newes <- matrix(nrow=nallarvs+numempty,ncol=ncol(es))
+   nonempty <- 1:nallarvs
+   newes[nonempty,1] <- cuallarvs
+   if (is.null(simlist$arrvevnt)) stop('simlist$arrvevnt undefined')
+   newes[nonempty,2] <- simlist$arrvevnt
+   colnames(newes) <- cn
+   newes[nonempty,3] <- newes[nonempty,1]
+   newes[nonempty,4] <- 1:nallarvs
+   simlist$evnts <- newes
+   simlist$emptyrow = nallarvs + numempty
+}
