@@ -19,7 +19,7 @@ Main simulation routines.
 }
 
 \usage{
-newsim(appcols=NULL,dbg=FALSE) 
+newsim(evsetrows,appcols=NULL,dbg=FALSE) 
 insevnt(evnt,simlist)
 schedevnt(evnttime,evnttype,simlist,appdata=NULL)
 getnextevnt(simlist)
@@ -33,6 +33,8 @@ delfcfs(queue)
 \arguments{
   \item{dbg}{If TRUE, use debug mode, action pausing for each new
       event occurrence.}
+  \item{devsetrows}{Number of rows to allocate initially for the event
+      set.}
   \item{evnt}{An event.}
   \item{simlist}{An R environment containing the simulation, produced by
       \code{newsim}.}
