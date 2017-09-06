@@ -79,7 +79,7 @@ mm1react <- function(evnt,simlist) {
          # start job service
          simlist$srvrbusy <- TRUE
          srvduration <- rexp(1,simlist$srvrate)
-         schedevnt(simlist$currtime+srvduration,simlist$srvevnt,simlist,
+         schedevnt(simlist,simlist$currtime+srvduration,simlist$srvevnt,
             qhead[3:4])
       }
    } 

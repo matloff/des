@@ -122,7 +122,6 @@ getfreerow <- function(simlist) {
 getnextevnt <- function(simlist) {
    # find earliest event
    etimes <- simlist$evnts[,1]
-   if (is.null(etimes)) return(NULL)
    earliest <- which.min(etimes)
    head <- simlist$evnts[earliest,]
    simlist$evnts[earliest,1] <- simlist$timelim2
@@ -142,10 +141,10 @@ mainloop <- function(simlist) {
    simtimelim <- simlist$timelim
    while(TRUE) {
       head <- getnextevnt(simlist)  
-      if (is.null(head)) return()
+      etime <- head['evnttime']
       # update current simulated time
-      simlist$currtime <- head['evnttime']
-      if (simlist$currtime > simlist$timelim) return()
+      if (etime > simlist$timelim) return()
+      simlist$currtime <- etime
       # process this event (programmer-supplied ftn)
       simlist$reactevent(head,simlist)  
       if (simlist$dbg) {
@@ -245,9 +244,9 @@ exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
    newes[nonempty,1] <- cuallarvs
    if (is.null(simlist$arrvevnt)) stop('simlist$arrvevnt undefined')
    newes[nonempty,2] <- simlist$arrvevnt
-   colnames(newes) <- cn
    newes[nonempty,3] <- newes[nonempty,1]
    newes[nonempty,4] <- 1:nallarvs
    newes[-nonempty,1] <- simlist$timelim2
+   colnames(newes) <- cn
    simlist$evnts <- newes
 }
