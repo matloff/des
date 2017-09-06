@@ -3,10 +3,8 @@
 # exponential service times, 1 server
 
 mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
-
    # set up structures
-   simlist <- newsim(3,appcols=c('arrvtime','jobnum'),dbg)
-   simlist$timelim <- timelim
+   simlist <- newsim(timelim,3,appcols=c('arrvtime','jobnum'),dbg)
    simlist$reactevent <- mm1react  
    simlist$arrvrate <- 1 / meaninterarrv
    simlist$srvrate <- 1 / meansrv
@@ -55,17 +53,17 @@ incremjobnum <- function(simlist) {
 mm1react <- function(evnt,simlist) {
    etype <- evnt['evnttype']
    if (etype == simlist$arrvevnt) {  # job arrival
-      # schedule next arrival
-      timeofnextarrival <- simlist$currtime + rexp(1,simlist$arrvrate)
-      jobnum <- incremjobnum(simlist)
-      schedevnt(timeofnextarrival,simlist$arrvevnt,simlist,
-         c(timeofnextarrival,jobnum))
+      ### # schedule next arrival
+      ### timeofnextarrival <- simlist$currtime + rexp(1,simlist$arrvrate)
+      ### jobnum <- incremjobnum(simlist)
+      ### schedevnt(simlist,timeofnextarrival,simlist$arrvevnt,
+      ###    c(timeofnextarrival,jobnum))
       # start newly-arrived job or queue it
       if (!simlist$srvrbusy) {  # server free, start job service
          simlist$srvrbusy <- TRUE
          srvduration <- rexp(1,simlist$srvrate)
-         schedevnt(simlist$currtime+srvduration,simlist$srvevnt,
-            simlist,evnt[3:4])  # copy over previous data for this job
+         schedevnt(simlist,simlist$currtime+srvduration,simlist$srvevnt,
+            evnt[3:4])  # copy over previous data for this job
       } else {  # server busy, add job to queue
          appendfcfs(simlist$queue,evnt)
       }

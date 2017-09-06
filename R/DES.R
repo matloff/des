@@ -2,24 +2,33 @@
 # DES.R:  R routines for discrete-event simulation (DES), event-oriented
 # method
 
-# March 2017 major changes
+# March 2017 major changes (updated September 2017)
 
 # 1.  No longer keep the event set in sorted order.  Too costly to do
 # insertion, and anyway earliest event can be determined via which.min(),
 # a C-level function that should be much faster.  
 
-# 2.  In old version, used matrix instead of data frame, as latter was
-# quite slow.  Probably should go back to data frame, but for now, at
-# least add meaningful column names and use them.
+# 2.  Similarly, there is no dynamic resizing of the event set.  Space is
+# marked as either free or in use.  This requires the user to provide an
+# upper bound for the maximum number of events, a restriction, but should
+# result in quite a performance boost.
+
+# 3.  In old version, used matrix instead of data frame, as latter was
+# quite slow, and now back to matrix.  Probably should go back to data
+# frame, maybe data.table, but for now, at least add meaningful column
+# names and use them.
 
 # all data is stored in an R environment variable that will be referrred
 # to as simlist below; an environment variable is used so that functions
-# can change their simlist argument, rather than reassigning
+# can change their simlist components, rather than reassigning
 
 # the simlist will consist of the following components:
 #
 #       currtime:  current simulated time
-#       evnts:  the events list, a matrix, one event per row
+#       timelim:  max simulated time
+#       timelim2:  double timelim
+#       evnts:  the events list, a matrix, one event per row; timelim2 
+#               value in first col means this row is free
 #       reactevent:  event handler function, user-supplied; creates 
 #                    new events upon the occurrence of an old one;
 #                    e.g. job arrival triggers either start of 
@@ -36,27 +45,31 @@
 # for: 
 # 
 #    occurrence time
-#    event type (user-defined numeric code, e.g. 1 for arrival, 2 for 
-#       job completion, etc.)
+#    event type: user-defined numeric code, e.g. 1 for arrival, 2 for 
+#       job completion, etc. (must be numeric as this is a matrix, but
+#       one can of course give names to the codes)
 #    application-specific information, if any
 
 # library functions 
 # 
 #       newsim:  create a new simlist
 #       schedevnt:  schedule a new event 
+#       getfreerow:  find a free row in the event set
 #       getnextevnt:  pulls the earliest event from the event set,
 #                     updates the current simulated time, and 
-#                     processes this event
+#                     processes this event; usually not called by users
 #       mainloop:  as the name implies
-#       cancel:  cancel a previously-scheduled event
+#       cancelevnt:  cancel a previously-scheduled event
 #       newqueue:  creates a new work queue
 #       appendfcfs:  append job to a FCFS queue
 #       delfcfs:  delete head of a FCFS queue
+#       exparrivals:  convenience function if arrivals can all be
+#                     generated ahead of time
 
 # event set:
 
 #    matrix in simlist
-#    one row for each event, rows ordered by event occurrence time
+#    one row for each event, rows NOT ordered by event occurrence time
 #    first two cols are event time, event type, then app-specific info,
 #       if any
 
@@ -71,15 +84,17 @@
 
 # create a simlist, which will be the return value, an R environment;
 # appcols is the vector of names for the application-specific columns;
-# maxevsetrows is the maximum number of rows needed for the event set
-newsim <- function(evsetrows,appcols=NULL,dbg=FALSE) {
+# maxesize is the maximum number of rows needed for the event set
+newsim <- function(timelim,maxesize,appcols=NULL,dbg=FALSE) {
    simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
+   simlist$timelim <- timelim
+   simlist$timelim2 <- 2 * timelim
+   simlist$passedtime <- function(z) z > simlist$timelim
    simlist$evnts <- 
-      matrix(nrow=evsetrows,ncol=2+length(appcols))  # event set
+      matrix(nrow=maxesize,ncol=2+length(appcols))  # event set
    colnames(simlist$evnts) <- c('evnttime','evnttype',appcols)
-   simlist$emptyrow <- 1  # row index at which new event can be placed
-   simlist$evnts[,1] <- Inf
+   simlist$evnts[,1] <- simlist$timelim2
    simlist$dbg <- dbg
    simlist
 }
@@ -87,40 +102,50 @@ newsim <- function(evsetrows,appcols=NULL,dbg=FALSE) {
 # schedule new event in simlist$evnts; evnttime is the time at
 # which the event is to occur; evnttype is the event type; appdata is
 # a vector of numerical application-specific data
-schedevnt <- function(evnttime,evnttype,simlist,appdata=NULL) {
+schedevnt <- function(simlist,evnttime,evnttype,appdata=NULL) {
    evnt <- c(evnttime,evnttype,appdata)
-   if (is.na(simlist$emptyrow)) {
-      erow <- which(simlist$evnts[,1] == Inf)[1]
-      simlist$emptyrow <- erow
-   }
-   simlist$evnts[simlist$emptyrow,] <- evnt
-   simlist$emptyrow <- NA
+   # length of evnt must be number of cols in the event set matrix
+   fr <- getfreerow(simlist)
+   simlist$evnts[fr,] <- evnt
+}
+
+# find number of the first free row
+getfreerow <- function(simlist) {
+   evtimes <- simlist$evnts[,1]
+   tmp <- Position(simlist$passedtime,evtimes)
+   if (is.na(tmp)) stop('no room for new event')
+   tmp
 }
 
 # start to process next event (second half done by application
 # programmer via call to reactevnt() from mainloop())
 getnextevnt <- function(simlist) {
    # find earliest event
-   earliest <- which.min(simlist$evnts[,1])
+   etimes <- simlist$evnts[,1]
+   if (is.null(etimes)) return(NULL)
+   earliest <- which.min(etimes)
    head <- simlist$evnts[earliest,]
-   delevnt(earliest,simlist)
+   simlist$evnts[earliest,1] <- simlist$timelim2
    return(head)
 }
 
-# removes event in row i of event set
-delevnt <- function(i,simlist) {
-   # simlist$evnts <- simlist$evnts[-i,,drop=F]  
-   simlist$evnts[i,1] <- Inf
-   simlist$emptyrow <- i
-}
+## no longer used
+## removes event in row i of event set
+## delevnt <- function(i,simlist) {
+##    # simlist$evnts <- simlist$evnts[-i,,drop=F]  
+##    simlist$evnts[i,1] <- Inf
+##    simlist$emptyrow <- i
+## }
 
 # main loop of the simulation
 mainloop <- function(simlist) {
    simtimelim <- simlist$timelim
-   while(simlist$currtime < simtimelim) {
+   while(TRUE) {
       head <- getnextevnt(simlist)  
+      if (is.null(head)) return()
       # update current simulated time
-      simlist$currtime <- head['evnttime']  
+      simlist$currtime <- head['evnttime']
+      if (simlist$currtime > simlist$timelim) return()
       # process this event (programmer-supplied ftn)
       simlist$reactevent(head,simlist)  
       if (simlist$dbg) {
@@ -212,8 +237,10 @@ exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
    cuallarvs <- cumsum(allarvs)
    allarvs <- allarvs[cuallarvs <= simlist$timelim]
    nallarvs <- length(allarvs)
+   if (nallarvs == 0) stop('no arrivals before timelim')
    cuallarvs <- cuallarvs[1:nallarvs]
-   newes <- matrix(nrow=nallarvs+numempty,ncol=ncol(es))
+   maxesize <- nallarvs + nrow(es)
+   newes <- matrix(nrow=maxesize,ncol=ncol(es))
    nonempty <- 1:nallarvs
    newes[nonempty,1] <- cuallarvs
    if (is.null(simlist$arrvevnt)) stop('simlist$arrvevnt undefined')
@@ -221,6 +248,6 @@ exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
    colnames(newes) <- cn
    newes[nonempty,3] <- newes[nonempty,1]
    newes[nonempty,4] <- 1:nallarvs
+   newes[-nonempty,1] <- simlist$timelim2
    simlist$evnts <- newes
-   simlist$emptyrow = nallarvs + numempty
 }
