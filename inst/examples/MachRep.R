@@ -4,71 +4,70 @@
 
 mrp <- function(meanup,meanrep,timelim,m,r,dbg=FALSE) {
    # set up structures
-   simlist <- newsim(timelim,dbg=dbg)
+   simlist <- newsim(timelim,m,appcols='startqtime',dbg=dbg)
    simlist$reactevent <- mrpreact  
-   simlist$uprate <- 1.0 / meaninterup
+   simlist$uprate <- 1.0 / meanup
    simlist$reprate <- 1.0 / meanrep
+   simlist$nmach <- m
+   simlist$nrepairpersons <- r
    simlist$queue <- newqueue(simlist)  # queue for the repairpersons
-   simlist$nrepairing <- 0  # number of machines now being repaired
+   simlist$nup <- m  # all machines up initially
+   simlist$nrepbusy <- 0  # doesn't include those queued for repair
    simlist$breakevnt <- 1  # breakdown
    simlist$repairevnt <- 2  # good as new!
-   # bookkeeping
-   simlist$totuptime <- 0.0  # total up time for all machines
+   # bookkeeping; say we are interested in mean wait until repai
+   simlist$nrepairs <- 0
+   simlist$totqtime <- 0.0  
 
    # get the ball rolling: set breakdown events for the machines, which
    # are all currently up at time 0.0
    for (i in 1:m) {
-      whenbreak <- rexpon(1,simlist$uprate)a
-      schedevnt(simlist,whenbreak,simlist$breakevnt)
+      whenbreak <- rexp(1,simlist$uprate)
+      # schedule a breakdown event for machine i at time whenbreak
+      schedevnt(simlist,whenbreak,simlist$breakevnt,appdata=NA)
    }
 
    # start sim
    mainloop(simlist)
 
    # sim done
-   # should print out something near 1 / (srvrate - arrvrate)
-   cat("mean wait:  ")
-   print(simlist$totwait / simlist$totjobs)
-}
-
-incremjobnum <- function(simlist) {
-   jobnum <- simlist$jobnum + 1
-   simlist$jobnum <- jobnum
-   jobnum
+   cat("mean queuing time:  ")
+   print(simlist$totqtime / simlist$nrepairs)
 }
 
 # what new events are triggered by the occurrence of an old one?
-mm1react <- function(evnt,simlist) {
+mrpreact <- function(evnt,simlist) {
    etype <- evnt['evnttype']
-   if (etype == simlist$arrvevnt) {  # job arrival
-      ### # schedule next arrival
-      ### timeofnextarrival <- simlist$currtime + rexp(1,simlist$arrvrate)
-      ### jobnum <- incremjobnum(simlist)
-      ### schedevnt(simlist,timeofnextarrival,simlist$arrvevnt,
-      ###    c(timeofnextarrival,jobnum))
-      # start newly-arrived job or queue it
-      if (!simlist$srvrbusy) {  # server free, start job service
-         simlist$srvrbusy <- TRUE
-         srvduration <- rexp(1,simlist$srvrate)
-         schedevnt(simlist,simlist$currtime+srvduration,simlist$srvevnt,
-            evnt[3:4])  # copy over previous data for this job
-      } else {  # server busy, add job to queue
+   if (etype == simlist$breakevnt) {  # machine has gone down
+      # is there is a free repairperson
+      nrepb <- simlist$nrepbusy
+      if (nrepb < simlist$nrepairpersons) {  
+         # start repair
+         simlist$nrepbusy <- nrepb - 1
+         repduration <- rexp(1,simlist$reprate)
+         schedevnt(simlist,simlist$currtime+repduration,simlist$repairevnt,
+            appdata=NA)
+      } else {  # no repairpersons free, add job to queue
+         # record start
+         evnt[3] <- simlist$currtime
          appendfcfs(simlist$queue,evnt)
       }
-   } else if (etype == simlist$srvevnt) {  # job completion
+   } else {  # etype = simlist$repairevnt
       # bookkeeping
-      simlist$totjobs <- simlist$totjobs + 1
-      # wait time = job completion time - job arrival time
-      simlist$totwait <- simlist$totwait + simlist$currtime - evnt[3]
-      simlist$srvrbusy <- FALSE
+      simlist$nrepairs <- simlist$nrepairs + 1
+      if (!is.na(evnt[3])) {
+         simlist$totqtime <- simlist$qtime + simlist$currtime - evnt[3]
+         evnt[3] <- NA
+      }
+      simlist$nrepbusy <- simlist$nrepbusy - 1
       # check queue for waiting jobs
       if (nrow(simlist$queue$m) > 0) {  # nonempty queue
          qhead <- delfcfs(simlist$queue)
          # start job service
-         simlist$srvrbusy <- TRUE
-         srvduration <- rexp(1,simlist$srvrate)
-         schedevnt(simlist,simlist$currtime+srvduration,simlist$srvevnt,
-            qhead[3:4])
+         simlist$nrepbusy <- simlist$nrepbusy + 1
+         srvduration <- rexp(1,simlist$reprate)
+         schedevnt(simlist,simlist$currtime+srvduration,simlist$breakevnt,
+            qhead[3])
       }
    } 
 }
