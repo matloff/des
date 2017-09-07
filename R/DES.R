@@ -88,7 +88,7 @@
 # appcols is the vector of names for the application-specific columns;
 # maxesize is the maximum number of rows needed for the event set
 newsim <- function(timelim,maxesize,appcols=NULL,aevntset=FALSE,dbg=FALSE) {
-   simlist <<- new.env()
+   simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
    simlist$timelim <- timelim
    simlist$timelim2 <- 2 * timelim
@@ -270,7 +270,4 @@ exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
    colnames(newes) <- cn
    simlist$aevnts <- newes
 }
-
-# convenience wrapper
-now <- function() simlist$currtime
 
