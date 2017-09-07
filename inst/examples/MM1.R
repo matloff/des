@@ -44,7 +44,7 @@ mm1react <- function(evnt,simlist) {
       } else {  # server busy, add job to queue
          appendfcfs(simlist$queue,evnt)
       }
-   } else if (etype == simlist$srvevnt) {  # job completion
+   } else {  # etype = simlist$srvevnt, job completion
       # bookkeeping
       simlist$totjobs <- simlist$totjobs + 1
       # wait time = job completion time - job arrival time
