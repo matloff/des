@@ -1,4 +1,4 @@
 
 export(newsim,schedevnt,getnextevnt,mainloop,
-   cancelevnt,appendfcfs,delfcfs,newqueue) 
+   cancelevnt,appendfcfs,delfcfs,newqueue,exparrivals) 
 

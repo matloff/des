@@ -6,7 +6,9 @@
 
 # 1.  No longer keep the event set in sorted order.  Too costly to do
 # insertion, and anyway earliest event can be determined via which.min(),
-# a C-level function that should be much faster.  
+# a C-level function that should be much faster.  (There is also a
+# provision for an "arrivals event set," for arrivals only, taking
+# advantage of the ordered nature of pre-generated arrivals.)
 
 # 2.  Similarly, there is no dynamic resizing of the event set.  Space is
 # marked as either free or in use.  This requires the user to provide an
@@ -85,7 +87,7 @@
 # create a simlist, which will be the return value, an R environment;
 # appcols is the vector of names for the application-specific columns;
 # maxesize is the maximum number of rows needed for the event set
-newsim <- function(timelim,maxesize,appcols=NULL,dbg=FALSE) {
+newsim <- function(timelim,maxesize,appcols=NULL,aevntset=FALSE,dbg=FALSE) {
    simlist <- new.env()
    simlist$currtime <- 0.0  # current simulated time
    simlist$timelim <- timelim
@@ -95,6 +97,11 @@ newsim <- function(timelim,maxesize,appcols=NULL,dbg=FALSE) {
       matrix(nrow=maxesize,ncol=2+length(appcols))  # event set
    colnames(simlist$evnts) <- c('evnttime','evnttype',appcols)
    simlist$evnts[,1] <- simlist$timelim2
+   simlist$aevntset <- aevntset
+   if (aevntset) {
+      simlist$aevnts <- NULL  # will be reset by exparrivals()
+      simlist$nextaevnt <- 1  # row number in aevnts of next arrival
+   }
    simlist$dbg <- dbg
    simlist
 }
@@ -122,9 +129,20 @@ getfreerow <- function(simlist) {
 getnextevnt <- function(simlist) {
    # find earliest event
    etimes <- simlist$evnts[,1]
-   earliest <- which.min(etimes)
-   head <- simlist$evnts[earliest,]
-   simlist$evnts[earliest,1] <- simlist$timelim2
+   whichnexte <- which.min(etimes)
+   nextetime <- etimes[whichnexte]
+   if (simlist$aevntset) {
+      nextatime <- simlist$aevnts[simlist$nextaevnt,1]
+      if (nextatime < nextetime) {
+         oldrow <- simlist$nextaevnt 
+         simlist$nextaevnt <- oldrow + 1
+         return(simlist$aevnts[oldrow,])
+      }
+   }
+   # either don't have a separate arrivals event set, or the next
+   # arrival is later than now
+   head <- simlist$evnts[whichnexte,]
+   simlist$evnts[whichnexte,1] <- simlist$timelim2
    return(head)
 }
 
@@ -218,8 +236,10 @@ delfcfs <- function(queue) {
 
 # in many cases, we have exponential interarrivals that occur
 # independently of the rest of the system; this function generates all
-# arrivals at the outset, placing them in the event set
+# arrivals at the outset, placing them in a separate arrivals event set
 exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
+   if (!simlist$aevntset) 
+      stop("newsim() wasn't called with aevntset TRUE")
    es <- simlist$evnts
    cn <- colnames(es)
    if (cn[3] != 'arrvtime') stop('col 3 must be "arrvtime"')
@@ -248,5 +268,5 @@ exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
    newes[nonempty,4] <- 1:nallarvs
    newes[-nonempty,1] <- simlist$timelim2
    colnames(newes) <- cn
-   simlist$evnts <- newes
+   simlist$aevnts <- newes
 }

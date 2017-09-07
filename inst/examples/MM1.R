@@ -4,7 +4,8 @@
 
 mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
    # set up structures
-   simlist <- newsim(timelim,3,appcols=c('arrvtime','jobnum'),dbg)
+   simlist <- 
+      newsim(timelim,3,appcols=c('arrvtime','jobnum'),aevntset=TRUE,dbg)
    simlist$reactevent <- mm1react  
    simlist$arrvrate <- 1 / meaninterarrv
    simlist$srvrate <- 1 / meansrv
@@ -18,19 +19,6 @@ mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
    # event type codes: 1 for arrival, 2 for service completion
    simlist$arrvevnt <- 1
    simlist$srvevnt <- 2
-
-   ### # set up and schedule first event, including info on this job's 
-   ### # arrival time for later use in finding mean wait until job done
-   ### timeto1starrival <- rexp(1,simlist$arrvrate)
-   ### jobnum <- incremjobnum(simlist)
-
-   # schedule an event to occur at time timeto1starrival, of event type
-   # arrvevnt, in our sim structure simlist; this will result in a row
-   # inserted in the schedule matrix, with app-specific data consisting
-   # of the arrival time of the job (so we can later determine how much
-   # total time the job spent in the system) and its job number
-   ### schedevnt(timeto1starrival,simlist$arrvevnt,simlist,
-   ###    c(timeto1starrival,jobnum))
 
    exparrivals(simlist,meaninterarrv,1)
 
