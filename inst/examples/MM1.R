@@ -31,21 +31,10 @@ mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
    print(simlist$totwait / simlist$totjobs)
 }
 
-incremjobnum <- function(simlist) {
-   jobnum <- simlist$jobnum + 1
-   simlist$jobnum <- jobnum
-   jobnum
-}
-
 # what new events are triggered by the occurrence of an old one?
 mm1react <- function(evnt,simlist) {
    etype <- evnt['evnttype']
    if (etype == simlist$arrvevnt) {  # job arrival
-      ### # schedule next arrival
-      ### timeofnextarrival <- simlist$currtime + rexp(1,simlist$arrvrate)
-      ### jobnum <- incremjobnum(simlist)
-      ### schedevnt(simlist,timeofnextarrival,simlist$arrvevnt,
-      ###    c(timeofnextarrival,jobnum))
       # start newly-arrived job or queue it
       if (!simlist$srvrbusy) {  # server free, start job service
          simlist$srvrbusy <- TRUE
