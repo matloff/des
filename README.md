@@ -238,16 +238,47 @@ next.
 In the initialization, the arrivals are pre-calculated with
 
 ```R
-exparrivals(simlist,meaninterarrv,1)
+exparrivals(simlist,meaninterarrv)
 ```
 
-The argument 1 means
+As explained in the Technical Details section below, these are actually
+stored in a special auxiliary event set, but that need not concern the
+application programmer other than a special argument **aevntset** in
+**newsim** that signals use of the auxiliary event set internally.
 
+```R
+   simlist <-
+      newsim(timelim,3,appcols=c('arrvtime','jobnum'),aevntset=TRUE,dbg)
+```
 
+Note that there are two application-specific fields in **appcols**:
+**arrvtime** is recorded so that when a job finally completes service,
+we can calculate how long it was in the system, thus enabling the
+computation of mean wait; **jobnum** is simply a job ID, 1,2,3,..., not
+directly used here, but usually a good idea, e.g. to help in debugging.
+
+The rest of **mm1** and **mm1react** are similar to the machine-repair
+example above.
+
+## Debugging
+
+Setting **dbg** to TRUE in the call to **newsim** specifies debug mode.
+This is then used by **mainloop**, which pauses after each event
+occurrence.  The event and the new event list are printed out, and 
+R browser mode is entered, enabling single-stepping and querying of
+variables.
 
 ## Other functions
 
+An important function is **cancelevnt**, which does exactly what its
+name implies.
 
+Suppose we are simulating a computer system that has some timeout
+period **tmo**.  We would define a timeout event, and schedule an instance of
+that event for **tmo** time later.  But if some action turns out to
+occur before then, we would need to cancel the timeout.
+
+## Technical details
 
 ## Process-oriented DES
 
@@ -259,3 +290,5 @@ generate the next arrival upon the occurrence of one arrival.  Instead,
 there would be two *processes*, one for arrivals and one for the server.
 If you are familiar with OS threads, each process here is similar to a
 thread.
+
+
