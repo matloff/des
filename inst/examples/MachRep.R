@@ -65,10 +65,6 @@ mrpreact <- function(evnt,simlist) {
    } else {  # etype = simlist$repairevnt
       # bookkeeping
       simlist$nrepairs <- simlist$nrepairs + 1
-      # repair preceded by queuing?
-      if (!is.na(evnt[3])) {
-         simlist$totqtime <- simlist$totqtime + simlist$currtime - evnt[3]
-      }
       # start next up time for this machine
       uptime <- rexp(1,simlist$uprate)
       schedevnt(simlist,simlist$currtime+uptime,simlist$breakevnt,
@@ -78,6 +74,8 @@ mrpreact <- function(evnt,simlist) {
       # check queue for waiting jobs
       if (nrow(simlist$queue$m) > 0) {  # nonempty queue
          qhead <- delfcfs(simlist$queue)
+         # bookkeeping
+         simlist$totqtime <- simlist$totqtime + simlist$currtime - qhead[3]
          # start job service
          # this repairperson now busy
          simlist$nrepbusy <- simlist$nrepbusy + 1
