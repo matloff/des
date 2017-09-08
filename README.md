@@ -5,6 +5,8 @@
 *Discrete event simulation* refers to the simulation of systems that
 have abrupt, i.e. discrete, changes. In a queuing system, for instance,
 when a new job arrives, the queue length abruptly increases by 1.
+Simulation of a weather system, on the other hand, would not fit this
+definition, as quantities such as temperature vary continuously.
 
 ## What is the DES package?
 
@@ -12,94 +14,123 @@ The DES package here, **DES**, is not the fastest. I recommend the
 [excellent **simmer** package](https://cran.rstudio.com/web/packages/simmer/index.html) 
 if speed is an issue.  On the other hand, **DES** is much easier to 
 learn (good for teaching, for instance), and gives the programmer 
-more control, thus making simulation of some systems easier to program.
-The package uses the *event-oriented* approach, which means the
-programmer codes how the system reacts to any specific event.  
+more control, thus making simulation of more complex systems easier 
+to program.  
 
-## Example:  M/M/1 queue
+## Example:  Machine-repair model
 
-To see how event-oriented simulation works, consider a classic example,
-the M/M/1 queue:  Interjob arrival times and job service times are
-exponentially distributed, and there is 1 server.
+The **DES** package uses the *event-oriented* approach, which means the
+programmer codes how the system reacts to any specific event.  To see
+how event-oriented simulation works, consider a simple machine-repair
+model.
 
-The file **inst/examples/MM1.R** in the package simulates this system. 
+We have **m** machines and **r** repairpersons.  Each machine
+occasionaly breaks down.  If at the time of a breakdown there is at
+least one idle repairperson, that machine's reppair is begun; otherwise,
+it joins a queue for the repairperson pool.  We assume up times and
+repair times are exponentially distributed, with all times being
+independent and so on.
+
+The file **inst/examples/MachRep.R** in the package simulates this system. 
 The functions in that file are thus application-specific, and we will
 refer to them as *user-supplied*.  They call **DES** functions, which we
-will refer to as *package functions*.  The *user-supplied wrapper* that runs 
-the simulation is named **mm1** here.
+will refer to as *package functions*.  The user-supplied wrapper that runs 
+the simulation is named **mrp** here.
 
-Here there are two kinds of events, job arrival and job completion.
-Think about how the system reacts to an arrival:
+#### Event types
 
-1. If the server is free, start service for this job.  Otherwise, add
-   the job to the queue.
+Here there are two kinds of events in this application, breakdown and repair.
+Think about how the system reacts to a breakdown at a machine:
 
-2. Wait for the next arrival.
+1. If some repairperson is free, start service for this machine.  
+   Otherwise, add the job to the queue.
 
-What about reaction to a job service completion?
+What about reaction to a repair completion at a machine?
 
-1. If the queue is nonempty, remove the head and start service for that
+1. Start the next up time for this machine.
+
+2. If the queue is nonempty, remove the head and start repaird for that
    job.
 
-### Basic structures: the sim list and event set
+### The sim list 
 
 The general information about the simulation is contained in the *sim
-list*, which **mm1** not surprisingly has named **simlist**.  Here are
+list*, which **mrp** not surprisingly has named **simlist**.  Here are
 the first few lines:
 
 ```R
-mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
-   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg)
-   simlist$reactevent <- mm1react
-   simlist$arrvrate <- 1 / meaninterarrv
-   simlist$srvrate <- 1 / meansrv
-   simlist$totjobs <- 0
-   simlist$totwait <- 0.0
-   simlist$queue <- newqueue(4)
-   simlist$srvrbusy <- FALSE
+mrp <- function(meanup,meanrep,timelim,m,r,dbg=FALSE) {
+   # set up structures
+   simlist <- newsim(timelim,m,
+      appcols=c('startqtime','startuptime'),dbg=dbg)
+   simlist$reactevent <- mrpreact
+   simlist$uprate <- 1.0 / meanup
+   simlist$reprate <- 1.0 / meanrep
+   simlist$nmach <- m
+   simlist$nrepairpersons <- r
+   simlist$queue <- newqueue(simlist)  # queue for the repairpersons
+   simlist$nup <- m  # all machines up initially
+   simlist$nrepbusy <- 0  # number of busy repairpersons
+   simlist$breakevnt <- 1  # breakdown
+   simlist$repairevnt <- 2  # good as new!
+   simlist$nrepairs <- 0
+   simlist$totqtime <- 0.0
+   simlist$totuptime <- 0.0
 ```
 
 The package function **newsim** initializes the simulation, particularly
-the sim list.  The lines we see above are setting application-specific
-information in the sim list, such as the arrival and service rates.  
-Note too the initialization of the "bookkeeping" variables **totjobs**
-and **totwai**, which we need to find the mean queue wait at the end of
-the simulation.
+the non-application specific parts of the sim list, such as
+**simlist$currtime**, which will hold the current simulated time.  
 
-We will explain the other application-specific components shortly, but
-first note that the call to **newsim** also initializes non-application
-specific components of the sim list, such as **simlist$currtime**, the
-current simulated time, initialized to 0.0.  
+The lines we see above are setting application-specific information in
+the sim list, such as the up time and repair rates.  Note too the
+initialization of the "bookkeeping" variables **simlist$nrepairs**,
+which keeps track of the number of repairs done so far, needed so we can
+determine the mean queuing time later on.
 
-A key non-application specific component of the sim list is the *event
-set*, **simlist$evnts**, a matrix which we will discuss now.  This is,
-as the name implies, the set of pending events.  At any given time we
-will have an arrival pending, and possibly a pending service.  
+### Event set
 
-You can easily imagine generalizations.  Say we are simulating a system
-with k servers, with two job categories having separate queues, priority
-given to queue 1.  Then we would always have two arrivals pending, and
-have up to k service events pending.
-
-Or, think of a machine repair model, with m machines and r
-repairpersons.  Each machine alternately goes through up and down
-cycles, with random up times and random repair times.  Suppose m > r and
-currently i > r machines are down.  Then all r repairpersons will be
-busy, with r pending service completion events, and the m-i machines
-currently up have m-i breakdown events pending.
+A major **DES** structure is the *event set*, a matrix that contains all
+pending events, say three breakdowns and one repair.  It is initialized
+by **newsim** as a component of the sim list.  User-supplied codes adds
+events to the event set by calling the package function **schedevnt**.
 
 There will be one row in the event set for each pending event.  The row
 will contain the simulated time at which the event is to occur, and the
-event type (in the M/M/1 example, arrival or service completion).  The
-row will also contain optional application-specific information, which
-in our call to **newsim** we have specified as the arrival time of the
-job and the service time it requires.
+event type (in the machine-repair example, breakdown or repair
+completion).  The row will also contain optional application-specific
+information, which in our call to **newsim** we have specified as the
+start of queueinng time of the machine and the time at which the current
+up time for the machine began.  The argument **appcols** in **newsim**
+gives the names of these events (the names of their columns in the event
+set matrix), and the **appdata** argument in **schedevnt** gives the
+particular values of this data at the time of the call.
+
+Our user-supplied code, **mrp** here, must "get the ball rolling" by
+creating the initial events.  Since our simulation will assume that all
+machines start in the up mode -- it doesn't really matter in the long
+run, but we need a start -- **mrp** creates breakdown events for all of
+them:
+
+```R
+   for (i in 1:m) {
+      whenbreak <- rexp(1,simlist$uprate)
+      schedevnt(simlist,whenbreak,simlist$breakevnt,appdata=c(NA,0))
+   }
+```
+
+The call to **schedevnt** schedules a breakdown event at time
+**whenbreak**.  (Note that simulated time begins at 0.0.)
 
 ### User-suppplied reaction function and package function **mainloop**:
 
-A user-supplied *reaction function* will be called to process each event
-when it uoccurs.  The core function of the package function
-**mainloop**, then works as follows:  
+The user must supply a *reaction function*, which codes how the system
+reacts to the various events.  In the **mrp** code above, you can see
+that we have named that function **mrpreact**, and recorded it as a
+component of the sim list.  We'll look at that function shortly too.
+
+The core package function is **mainloop**, which works as
+follows:  
 
 ```
 while simulated time < time limit do
@@ -107,42 +138,41 @@ while simulated time < time limit do
    call the user-supplied reaction function with this event
 ```
 
-The reaction function will typically add one or more new events to the
-event set.  In **mm1**, for instance, if the reaction function is given
-an arrival event, it will generate the next arrival event, and add it to
-the event set. And if the current arrival occurs when the server is
-free, it will add a job service service completion event tp the event
-set.
+### Details of mrp
 
-We have named the user-supplied reaction function **mm1react**.
-**DES** requires that it have the call form
+So, let's look at our user-supplied reaction function in this example,
+**mrp**.  The first few lines are
 
 ```R
-mm1react(evnt,simlist)
-```
+mrpreact <- function(evnt,simlist) {
+   etype <- evnt['evnttype']
+   if (etype == simlist$breakevnt) {  # machine has gone down
+      # record this up time
+      simlist$totuptime <-
+         simlist$totuptime + simlist$currtime - evnt[4]
+      # is there is a free repairperson?
+      nrepb <- simlist$nrepbusy
+      if (nrepb < simlist$nrepairpersons) {
+         # start repair, no queuing
+         simlist$nrepbusy <- nrepb + 1
+         repduration <- rexp(1,simlist$reprate)
+         schedevnt(simlist,simlist$currtime+repduration,simlist$repairevnt,
+            appdata=c(NA,NA))
+      } else {  # no repairpersons free, add job to queue
+         # record start queue wait
+         evnt[3] <- simlist$currtime
+         appendfcfs(simlist$queue,evnt)
+      }
+   } else {  # etype = simlist$repairevnt
+...
 
-Note carefully that the entity that calls **mm1react** is the package
-function **mainloop**.  The argument **evnt** will be the row that the
-latter function has just removed from the event set.  The first two
-lines 
+These are the lines that handle breakdown events.  Recall that our
+user-supplied reaction function is called by the package function
+**mainloop**, which has provided us the just-occurred event, **evnt**.
+
+
 
 ```R
-etype <- evnt['evnttype']
-   if (etype == simlist$arrvevnt) {  # job arrival
-```
-
-check to see whether the event is an arrival or a job completion.  If it
-is the former, this code simulates the reaction:
-
-```R
-# schedule next arrival
-timeofnextarrival <- simlist$currtime + rexp(1,simlist$arrvrate)
-jobnum <- incremjobnum(simlist)
-schedevnt(timeofnextarrival,simlist$arrvevnt,simlist,
-   c(timeofnextarrival,jobnum))
-# start newly-arrived job or queue it
-if (!simlist$srvrbusy) {  # server free, start job service
-   simlist$srvrbusy <- TRUE
    srvduration <- rexp(1,simlist$srvrate)
    schedevnt(simlist$currtime+srvduration,simlist$srvevnt,
       simlist,evnt[3:4])  # copy over previous data for this job
@@ -184,7 +214,12 @@ relevant portion of the code from **mm1**:
          qhead[3:4])
    }
 }
+```
 
+Note that the package function **delfcfs** was used to delete the head
+of the queue.  The structure for the latter is in **simlist$queue**,
+with the actual queue being the matrix **m** in the latter.  The matrix
+is in the same format as the event set.
 
 Well, then, how does **mainloop** itself get started?  It is called by
 the user-defined wrapper, in this case **mm1**:
