@@ -20,7 +20,7 @@ mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
    simlist$arrvevnt <- 1
    simlist$srvevnt <- 2
 
-   exparrivals(simlist,meaninterarrv,1)
+   exparrivals(simlist,meaninterarrv)
 
    # start sim
    mainloop(simlist)

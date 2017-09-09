@@ -237,7 +237,7 @@ delfcfs <- function(queue) {
 # in many cases, we have exponential interarrivals that occur
 # independently of the rest of the system; this function generates all
 # arrivals at the outset, placing them in a separate arrivals event set
-exparrivals <- function(simlist,meaninterarr,numempty,batchsize=10000) {
+exparrivals <- function(simlist,meaninterarr,batchsize=10000) {
    if (!simlist$aevntset) 
       stop("newsim() wasn't called with aevntset TRUE")
    es <- simlist$evnts

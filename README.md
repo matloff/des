@@ -165,94 +165,120 @@ mrpreact <- function(evnt,simlist) {
       }
    } else {  # etype = simlist$repairevnt
 ...
+```
 
 These are the lines that handle breakdown events.  Recall that our
 user-supplied reaction function is called by the package function
 **mainloop**, which has provided us the just-occurred event, **evnt**.
+We see that the above code checks **evnt** for event type, and if it is
+a breakdown event, executes the code that follows.
 
+First there is bookkeeping to be done.  Since an up time has just ended,
+we need to calculate how long this time lasted, and add that to our
+running total in **simlist$totuptime**.
 
+Next we must check whether any repairpersons are free.  If so, we call
+**schedevnt** to schedule a repair event for the machine that just went
+down. Otherwise, we'll need to add the machine to the queue, using the
+package function **appendfcfs**. Note that in that latter case, we must
+set the **startqtime** field in the event vector to the current time, so
+that later when the repair time begins, we can calculate the queue
+residence time for this event.
 
-```R
-   srvduration <- rexp(1,simlist$srvrate)
-   schedevnt(simlist$currtime+srvduration,simlist$srvevnt,
-      simlist,evnt[3:4])  # copy over previous data for this job
-} else {  # server busy, add job to queue
-   appendfcfs(simlist$queue,evnt)
-}
-```
-
-That first line simulates the time of the next arrival.  The call to the
-package function **schedevnt** then adds this pending new arrival to the
-event set.  It's always nice in this kind of simulation to assign an ID
-to each job, hence our inclusion of a job number here.
-
-
-Now returning to the above code, it checks whether the server is busy.
-If not, then the newly-arrived job can start service.  A random service
-time is generated, and **schedevnt** is called to add this new service
-completion event to the event set.  On the other hand, if the server is
-busy, we add the newly-arrived job to the queue, via a call to the
-package function **appendfcfs**.
-
-And what happens when a job service completion occurs?  Here is the
-relevant portion of the code from **mm1**:
+The code for the case of a repair event is similar:
 
 ```R
-} else if (etype == simlist$srvevnt) {  # job completion
-   # bookkeeping
-   simlist$totjobs <- simlist$totjobs + 1
-   # wait time = job completion time - job arrival time
-   simlist$totwait <- simlist$totwait + simlist$currtime - evnt[3]
-   simlist$srvrbusy <- FALSE
-   # check queue for waiting jobs
-   if (nrow(simlist$queue$m) > 0) {  # nonempty queue
-      qhead <- delfcfs(simlist$queue)
-      # start job service
-      simlist$srvrbusy <- TRUE
-      srvduration <- rexp(1,simlist$srvrate)
-      schedevnt(simlist$currtime+srvduration,simlist$srvevnt,simlist,
-         qhead[3:4])
+   } else {  # etype = simlist$repairevnt
+      # bookkeeping
+      simlist$nrepairs <- simlist$nrepairs + 1
+      # start next up time for this machine
+      uptime <- rexp(1,simlist$uprate)
+      schedevnt(simlist,simlist$currtime+uptime,simlist$breakevnt,
+         appdata=c(NA,simlist$currtime))
+      # repairperson now free
+      simlist$nrepbusy <- simlist$nrepbusy - 1
+      # check queue for waiting jobs
+      if (nrow(simlist$queue$m) > 0) {  # nonempty queue
+         qhead <- delfcfs(simlist$queue)
+         # bookkeeping
+         simlist$totqtime <- simlist$totqtime + simlist$currtime - qhead[3]
+         # start job service
+         # this repairperson now busy
+         simlist$nrepbusy <- simlist$nrepbusy + 1
+         srvduration <- rexp(1,simlist$reprate)
+         schedevnt(simlist,simlist$currtime+srvduration,simlist$repairevnt,
+            qhead[3:4])
+      }
    }
-}
 ```
 
-Note that the package function **delfcfs** was used to delete the head
-of the queue.  The structure for the latter is in **simlist$queue**,
-with the actual queue being the matrix **m** in the latter.  The matrix
-is in the same format as the event set.
+We schedule an up time for the newly-repaired machine, and now that this
+repairperson is free, we check whether there are any machines waiting in
+the queue that this repairperson can work on.  If so, we remove the head
+of the queue and schedule a repair event for this machine.  Also, since
+the queue wait for that machine has ended, we calculate its queue
+residence time and add it to our running total.
 
-Well, then, how does **mainloop** itself get started?  It is called by
-the user-defined wrapper, in this case **mm1**:
+## Example:  M/M/1 queue model
 
-```R
-mm1 <- function(meaninterarrv,meansrv,timelim,dbg=FALSE) {
-   simlist <- newsim(3,appcols=c('arrvtime','srvtime'),dbg)
-   simlist$reactevent <- mm1react
-   ...
-   # set up and schedule first event, including info on this job's 
-   # arrival time for later use in finding mean wait until job done
-   timeto1starrival <- rexp(1,simlist$arrvrate)
-   jobnum <- incremjobnum(simlist)
-   schedevnt(timeto1starrival,simlist$arrvevnt,simlist,
-      c(timeto1starrival,jobnum))
-   # start sim
-   mainloop(simlist,timelim)
-   ...
-````
+The interarrival and service time distributions are assumed exponential
+("M" for "memoryless"), and there is a single server ("1").
+The file **inst/examples/MM1.R** in the package simulates this system,
+with **mm1** containing the overall code, and **mm1react** being the
+user-supplied reaction function.  The latter handles two kinds of
+events, job arrival and job service completion.
 
-The wrapper sets up the first event, adding it to the event list, then
-calls **mainloop**.
+Most of the code is similar to that of our first example. The main new
+part is use of the package function **exparrivals**, which we use to
+pre-calculate all the arrivals.  This makes the code look a little more
+like process-oriented simulation, with arrivals handled separately.
+Without this, in the reaction function, each arrival would spawn the
+next. 
 
-So, to simulate an M/M/1 queue with mean interarrival and service times
-1.0 and 0.5, over a simulated time range of 10000.0, we would execute
+In the initialization, the arrivals are pre-calculated with
 
 ```R
-> mm1(1,0.5,10000)
+exparrivals(simlist,meaninterarrv)
 ```
+
+As explained in the Technical Details section below, these are actually
+stored in a special auxiliary event set, but that need not concern the
+application programmer other than a special argument **aevntset** in
+**newsim** that signals use of the auxiliary event set internally.
+
+```R
+   simlist <-
+      newsim(timelim,3,appcols=c('arrvtime','jobnum'),aevntset=TRUE,dbg)
+```
+
+Note that there are two application-specific fields in **appcols**:
+**arrvtime** is recorded so that when a job finally completes service,
+we can calculate how long it was in the system, thus enabling the
+computation of mean wait; **jobnum** is simply a job ID, 1,2,3,..., not
+directly used here, but usually a good idea, e.g. to help in debugging.
+
+The rest of **mm1** and **mm1react** are similar to the machine-repair
+example above.
+
+## Debugging
+
+Setting **dbg** to TRUE in the call to **newsim** specifies debug mode.
+This is then used by **mainloop**, which pauses after each event
+occurrence.  The event and the new event list are printed out, and 
+R browser mode is entered, enabling single-stepping and querying of
+variables.
 
 ## Other functions
 
+An important function is **cancelevnt**, which does exactly what its
+name implies.
 
+Suppose we are simulating a computer system that has some timeout
+period **tmo**.  We would define a timeout event, and schedule an instance of
+that event for **tmo** time later.  But if some action turns out to
+occur before then, we would need to cancel the timeout.
+
+## Technical details
 
 ## Process-oriented DES
 
@@ -264,3 +290,5 @@ generate the next arrival upon the occurrence of one arrival.  Instead,
 there would be two *processes*, one for arrivals and one for the server.
 If you are familiar with OS threads, each process here is similar to a
 thread.
+
+
