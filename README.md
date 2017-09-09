@@ -280,15 +280,62 @@ occur before then, we would need to cancel the timeout.
 
 ## Technical details
 
-## Process-oriented DES
+(This material requires advanced knowledge of programming.)
+
+### Management of the event set
+
+The heart of any DES library is the code that manages the event set
+processing.  Typically that is done via a *priority queue*, with
+the word *priority* being interpreted in DES as earliest event time.
+This can implemented as a straight queue structure, with all pending
+events arranged in time order, or as a *heap*, with the earliest event
+always at the top.
+
+However, this approach is slow if coded in R, as it does not take
+advantage of operations in which R is efficient, such as matrix
+multiplication.  This is why for instance **simmer**'s code for this
+portion of the package is written in C++.  In order to stay purely in R,
+the **DES** package takes a different approach.
+
+As mentioned earlier, **DES** implements its event set as a matrix.  The
+rows of the matrix are not ordered, but the earliest event can be
+obtained efficiently using R's **which.min** function on the time column
+of the matrix. 
+
+However, even this would be slow for very large event sets.  In **DES**,
+we provide the option of pre-calculating arrivals, and this would make
+the event sets large.  On the other hand, arrivals are inherently
+ordered, so we store them separately.  Then the earliest event time is
+determined as the smaller of the first arrival time and the result of
+applying **which.min** to the non-arrivals event set.
+
+### Process-oriented DES
 
 All this is how event-oriented systems work.  *Process-oriented* systems
-such as **simmer** (which is modeled on the Python library
-[**SimPy**](https://simpy.readthedocs.io/en/latest/)) 
-are very similar to the above, except that there would not be code to
-generate the next arrival upon the occurrence of one arrival.  Instead,
-there would be two *processes*, one for arrivals and one for the server.
-If you are familiar with OS threads, each process here is similar to a
-thread.
+for DES are generally considered to be clearer. An example is the Python
+library 
+[**SimPy**](https://simpy.readthedocs.io/en/latest/)),
+on which **simmer** is based.
 
+Process-oriented code is similar to *threads* programming.  In 
+our above examples, process-oriented code would be similar in many
+respects, but with the difference that we would have a thread for each
+entity.  In the machine repair model, for instance, there may be a
+thread for each machine and a thread for each repairperson.  The code
+for machine threads would look something lik
+
+```
+repeat
+   simulate up time
+   queue for a repairperson
+   simulate down time 
+```
+
+By focusing on each individual actors, e.g. individual machines, it is
+hoped that the code is clearer.
+
+Though Python does have a threads capability, **SimPy* takes advantage
+of its *generator* feature.
+
+**SimPy**
 
