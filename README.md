@@ -99,19 +99,21 @@ determine the mean queuing time later on.
 
 A major **DES** structure is the *event set*, a matrix that contains all
 pending events, say three breakdowns and one repair.  It is initialized
-by **newsim** as a component of the sim list.  User-supplied code adds
-events to the event set by calling the package function **schedevnt**.
+by **newsim** as a component of the sim list named **evnts**.
+User-supplied code adds events to the event set by calling the package
+function **schedevnt**.
 
 There will be one row in the event set for each pending event.  The row
 will contain the simulated time at which the event is to occur, and the
 event type (in the machine-repair example, breakdown or repair
 completion).  The row will also contain optional application-specific
 information, which in our call to **newsim** we have specified as the
-start of queueing time of the machine and the time at which the current
-up time for the machine began.  The argument **appcols** in **newsim**
-gives the names of these quantities (the names of their columns in the event
-set matrix), and the **appdata** argument in **schedevnt** gives the
-particular values of this data at the time of the call.
+start of the current queueing time of the machine, if any, and the time
+at which the current up time for the machine began, if any.  The
+argument **appcols** in **newsim** gives the names of these quantities
+(the names of their columns in the event set matrix), and the
+**appdata** argument in **schedevnt** gives the particular values of
+this data at the time of the call.
 
 Our user-supplied code, **mrp** here, must "get the ball rolling" by
 creating the initial events.  Since our simulation will assume that all
@@ -145,10 +147,10 @@ while simulated time < time limit do
    call the user-supplied reaction function with this event
 ```
 
-### Details of mrp
+### Details of mrpreact
 
 So, let's look at our user-supplied reaction function in this example,
-**mrp**.  The first few lines are
+**mrpreact**.  The first few lines are
 
 ```R
 mrpreact <- function(evnt,simlist) {
