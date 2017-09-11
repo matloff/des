@@ -8,11 +8,18 @@ when a new job arrives, the queue length abruptly increases by 1.
 Simulation of a weather system, on the other hand, would not fit this
 definition, as quantities such as temperature vary continuously.
 
+This document will give a quick introduction to the subject of DES,
+using our R package **DES** as a running example.
+
 ## What is the DES package?
 
-The DES package here, **DES**, is not the fastest. I recommend the
+The R DES package here, **DES**, is not the fastest.  If speed is an
+issue, 
+I recommend the
 [excellent **simmer** package](https://cran.rstudio.com/web/packages/simmer/index.html) 
-if speed is an issue.  On the other hand, **DES** is much easier to 
+in R, or in Python,
+[**SimPy**](https://simpy.readthedocs.io/en/latest/), on which
+**simmer** is based.  On the other hand, **DES** is much easier to 
 learn (good for teaching, for instance), and gives the programmer 
 more control, thus making simulation of more complex systems easier 
 to program.  
@@ -26,7 +33,7 @@ model.
 
 We have **m** machines and **r** repairpersons.  Each machine
 occasionaly breaks down.  If at the time of a breakdown there is at
-least one idle repairperson, that machine's reppair is begun; otherwise,
+least one idle repairperson, that machine's repair is begun; otherwise,
 it joins a queue for the repairperson pool.  We assume up times and
 repair times are exponentially distributed, with all times being
 independent and so on.
@@ -37,7 +44,7 @@ refer to them as *user-supplied*.  They call **DES** functions, which we
 will refer to as *package functions*.  The user-supplied wrapper that runs 
 the simulation is named **mrp** here.
 
-#### Event types
+### Event types
 
 Here there are two kinds of events in this application, breakdown and repair.
 Think about how the system reacts to a breakdown at a machine:
@@ -49,7 +56,7 @@ What about reaction to a repair completion at a machine?
 
 1. Start the next up time for this machine.
 
-2. If the queue is nonempty, remove the head and start repaird for that
+2. If the queue is nonempty, remove the head and start repair for that
    job.
 
 ### The sim list 
@@ -92,7 +99,7 @@ determine the mean queuing time later on.
 
 A major **DES** structure is the *event set*, a matrix that contains all
 pending events, say three breakdowns and one repair.  It is initialized
-by **newsim** as a component of the sim list.  User-supplied codes adds
+by **newsim** as a component of the sim list.  User-supplied code adds
 events to the event set by calling the package function **schedevnt**.
 
 There will be one row in the event set for each pending event.  The row
@@ -100,9 +107,9 @@ will contain the simulated time at which the event is to occur, and the
 event type (in the machine-repair example, breakdown or repair
 completion).  The row will also contain optional application-specific
 information, which in our call to **newsim** we have specified as the
-start of queueinng time of the machine and the time at which the current
+start of queueing time of the machine and the time at which the current
 up time for the machine began.  The argument **appcols** in **newsim**
-gives the names of these events (the names of their columns in the event
+gives the names of these quantities (the names of their columns in the event
 set matrix), and the **appdata** argument in **schedevnt** gives the
 particular values of this data at the time of the call.
 
@@ -317,25 +324,40 @@ library
 [**SimPy**](https://simpy.readthedocs.io/en/latest/)),
 on which **simmer** is based.
 
-Process-oriented code is similar to *threads* programming.  In 
-our above examples, process-oriented code would be similar in many
-respects, but with the difference that we would have a thread for each
-entity.  In the machine repair model, for instance, there may be a
-thread for each machine and a thread for each repairperson.  The code
-for machine threads would look something lik
+Process-oriented code is similar to *threads* programming, and may be
+implemented using a threads library.  In our above examples,
+process-oriented code would be similar in many respects, but with the
+difference that we would have a thread for each entity.  In the machine
+repair model, for instance, there may be a thread for each machine and a
+thread for each repairperson.  The code for machine threads would look
+something like
 
 ```
 repeat
    simulate up time
-   queue for a repairperson
+   wake a repairperson or join queue
    simulate down time 
 ```
 
 By focusing on each individual actors, e.g. individual machines, it is
 hoped that the code is clearer.
 
-Though Python does have a threads capability, **SimPy* takes advantage
-of its *generator* feature.
+If implemented using a threads library, each simulation of a period of
+time, e.g. up time above, is handled by the relinquishing its timeslice,
+e.g. via a call to **pthread_suspend** in the **pthreads** library. A
+manager thread would activate whichever thread has the earliest event
+time.
 
-**SimPy**
+Though Python does have a threads capability, **SimPy** instead takes
+advantage of Python's  *generator* feature, implementing what amounts to
+a non-preemptive threads system.
 
+## Further information on DES
+
+I have an online course on DES, using **SimPy** as the example system.
+The course is in the PDF files in
+<a href="http://heather.cs.ucdavis.edu/~matloff/156/PLN">
+http://heather.cs.ucdavis.edu/~matloff/156/PLN</a>, with the first unit
+of the <strong>SimPy</strong> tutorial being in the file <a
+href="http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf">http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf</a>.
+See the above directory of PDF files for the remainder of the tutorial.
