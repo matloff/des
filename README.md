@@ -44,6 +44,15 @@ refer to them as *user-supplied*.  They call **DES** functions, which we
 will refer to as *package functions*.  The user-supplied wrapper that runs 
 the simulation is named **mrp** here.
 
+For instance, say we wish to simulate a system in which machines have
+mean up and repair times of 10.0 and 1.0, respectively, with 2 machines
+and one repairperson, for 10000.0 units of simulated time.  The call
+would be
+
+```R
+mrp(10,1,10000,2,1)
+```
+
 ### Event types
 
 Here there are two kinds of events in this application, breakdown and repair.
@@ -321,9 +330,9 @@ applying **which.min** to the non-arrivals event set.
 ### Process-oriented DES
 
 All this is how event-oriented systems work.  *Process-oriented* systems
-for DES are generally considered to be clearer. An example is the Python
-library 
-[**SimPy**](https://simpy.readthedocs.io/en/latest/)),
+for DES are generally considered to be clearer. A well-kown  example 
+is the Python library 
+[**SimPy**](https://simpy.readthedocs.io/en/latest/),
 on which **simmer** is based.
 
 Process-oriented code is similar to *threads* programming, and may be
@@ -341,14 +350,22 @@ repeat
    simulate down time 
 ```
 
+The code for a repairperson might be something like
+
+```
+repeat
+   deactivate
+   upon receiving wakeup signal, simulate repair time
+```
+
 By focusing on each individual actors, e.g. individual machines, it is
 hoped that the code is clearer.
 
 If implemented using a threads library, each simulation of a period of
-time, e.g. up time above, is handled by the relinquishing its timeslice,
-e.g. via a call to **pthread_suspend** in the **pthreads** library. A
-manager thread would activate whichever thread has the earliest event
-time.
+time, e.g. up time above, is handled by the thread relinquishing its
+timeslice, e.g. via a call to **pthread_suspend** in the **pthreads**
+library. A manager thread would then add the relinquishing thread to the
+event set, and activate whichever thread has the earliest event time.
 
 Though Python does have a threads capability, **SimPy** instead takes
 advantage of Python's  *generator* feature, implementing what amounts to
@@ -358,8 +375,8 @@ a non-preemptive threads system.
 
 I have an online course on DES, using **SimPy** as the example system.
 The course is in the PDF files in
-<a href="http://heather.cs.ucdavis.edu/~matloff/156/PLN">
-http://heather.cs.ucdavis.edu/~matloff/156/PLN</a>, with the first unit
-of the <strong>SimPy</strong> tutorial being in the file <a
-href="http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf">http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf</a>.
+[http://heather.cs.ucdavis.edu/~matloff/156/PLN](http://heather.cs.ucdavis.edu/~matloff/156/PLN),
+with the first unit of the <strong>SimPy</strong> tutorial being in the file 
+[http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf](http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf)
 See the above directory of PDF files for the remainder of the tutorial.
+
