@@ -1,14 +1,13 @@
-\name{newsim,insevnt,schedevnt,getnextevnt,mainloop,binsearch,newqueue,appendfcfs,delfcfs,cancelevnt}
+\name{newsim,schedevnt,getnextevnt,mainloop,newqueue,appendfcfs,delfcfs,cancelevnt,exparrivals}
 \alias{newsim}
-\alias{insevnt}
 \alias{cancelevnt}
 \alias{schedevnt}
 \alias{getnextevnt}
 \alias{mainloop}
-\alias{binsearch}
 \alias{newqueue}
 \alias{appendfcfs}
 \alias{delfcfs}
+\alias{exparrivals}
 
 \title{
 Discrete-event simulation routines.
@@ -19,15 +18,15 @@ Main simulation routines.
 }
 
 \usage{
-newsim(evsetrows,appcols=NULL,dbg=FALSE) 
-insevnt(evnt,simlist)
+newsim(timelim,maxesize,appcols=NULL,aevntset = FALSE,dbg=FALSE) 
 schedevnt(evnttime,evnttype,simlist,appdata=NULL)
 getnextevnt(simlist)
-mainloop(simlist,simtimelim) 
-binsearch(x,y) 
-newqueue(ncol) 
+mainloop(simlist) 
+newqueue(simlist) 
 appendfcfs(queue,jobtoqueue)
 delfcfs(queue)
+cancelevnt(rownum,simlist)
+exparrivals(simlist,meaninterarr,batchsize = 10000)
 }
 
 \arguments{
@@ -40,18 +39,20 @@ delfcfs(queue)
       \code{newsim}.}
   \item{evnttime}{Occurrence time for an event.}
   \item{evnttype}{Event type.}
-  \item{simtimelim}{Time limit for simulation.}
+  \item{timelim}{Time limit for simulation.}
+  \item{maxesize}{Maximum number of rows needed in the event set matrix,
+     excluding separate arrival event rows in the case \code{aevntset} =
+     TRUE.}
   \item{x}{Vector to search in.}
   \item{y}{Value searched for.}
   \item{queue}{A queue.  Must be in a \code{simlist} environment.}
   \item{jobtoqueue}{Job to be placed in a queue.}
+  \item{meaninterarrival}{Mean time between arrivals.}
+  \item{batchsize}{Number of arrivals to generate in one call to
+     \code{rexp}.}
 }
 
 \details{Discrete event simulation, using the event-oriented approach.
-See the PDF files in
-\url{http://heather.cs.ucdavis.edu/~matloff/156/PLN} for an online course
-on DES methods.  Note:  This package is intended as a convenience for R
-users; it is not as fast as C/C++ libraries.
 
 Here is an overview of the functions:
 
@@ -61,21 +62,21 @@ Here is an overview of the functions:
    list, current simulated time and so on, including any
    application-specific data.
 
-   \item \code{insevnt}:  Inserts an event into the event list.
+   \item \code{cancelevnt}:  Removes an event from the event set
+   Useful for instance for simulating timeout situations.  
+   Removal is done via setting the event time to double \code{timelim}.
 
-   \item \code{cancelevnt}:  Removes an event into the event list.
-   Useful for instance for simulating timeout situations.
-
-   \item \code{schedevnt}:  Creates a new event, and then calls
-   \code{insevnt} to insert it.
+   \item \code{schedevnt}:  Creates a new event, and then enters it into the
+   event set matrix.
 
    \item \code{getnextevnt}:  Removes and returns the earliest event
-   from the event list.
+   from the event set.
+   Removal is done via setting the event time to double \code{timelim}.
 
    \item \code{mainloop}:  Called by the application to start the
    simulation and run until the simulated time exceeds the
-   user-specified time limit.  At each iteration, calls
-   \code{getnextevnt} and invokes the application-specific reaction to
+   user-specified time limit.  At each iteration, calls \code{getnextevnt} 
+   and invokes the application-specific reaction function for
    the occurred event.  If \code{dbg} is set, then at each iteration the
    function will enter R \code{browser} mode, printing out the current
    event and simulated time, and giving the user an opportunity to "take
@@ -94,37 +95,37 @@ Here is an overview of the functions:
 
    }
 
-Main variables:  These are in the simlist, whose application-ind
+}
+
+\section{Main Variables}{
+These are in the simlist, whose application-ind
 components are:
 
    \itemize{
 
    \item \code{currtime}:  Current simulated time.
 
-   \item \code{evnts}:  The list of scheduled events; see below.
+   \item \code{evnts}:  The set of scheduled events; see below.
 
-   \item \code{reactevnt}:  Event handler, used-defined; see below.
+   \item \code{reactevnt}:  The reaction function, used-defined; see below.
 
    \item \code{dbg}:  See \code{mainloop} above.
 
    \item Application-specific variables.
 
    }
+}
 
-Structure of the event list:  One row for each event, rows ordered by
-event occurrence time.  First two columns are event time and event type
-(user-defined). The remaining columns, if any, contain
-application-specific information.
-
-Event handlers:  These are user-defined.  The \code{DES} function
+\section{Reaction Functions}{
+These are user-defined.  The \code{DES} function
 \code{mainloop} will make the call
 
 \code{simlist$reactevent(head, simlist)}
 
 where the user has initially set \code{simlist$reactevent} to his/her
 application-specific code.  Here \code{head} is the event just now
-removed from the head of the event list, and \code{simlist} is the event
-list.  Let's call this function the "event handler," but note that
+removed from the head of the event set, and \code{simlist} is the event
+set  Let's call this function the "event handler," but note that
 within it there are if/else cases, one for each event type.
 
 The For example, consider simulation of a single-server queue.  When a
@@ -135,7 +136,9 @@ started for this job.  If so, the code will schedule an event for
 completion of the service; if not, the code will add the job to the
 queue.
 
-Outline of typical application code:
+}
+
+\section{Outline of Typical Application Code}{
 
 \preformatted{
     mysim <- newsim()    # create the simlist
@@ -145,7 +148,6 @@ Outline of typical application code:
     mainloop(mysim,mysimtimelim)
     print results
 }
-
 
 }
 
