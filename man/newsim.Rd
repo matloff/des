@@ -42,7 +42,7 @@ exparrivals(simlist,meaninterarr,batchsize = 10000)
   \item{timelim}{Time limit for simulation.}
   \item{maxesize}{Maximum number of rows needed in the event set matrix,
      excluding separate arrival event rows in the case \code{aevntset} =
-     TRUE.}
+     TRUE.  (The matrix can be expanded dynamically if needed.)}
   \item{x}{Vector to search in.}
   \item{y}{Value searched for.}
   \item{queue}{A queue.  Must be in a \code{simlist} environment.}
@@ -97,25 +97,6 @@ Here is an overview of the functions:
 
 }
 
-\section{Main Variables}{
-These are in the simlist, whose application-ind
-components are:
-
-   \itemize{
-
-   \item \code{currtime}:  Current simulated time.
-
-   \item \code{evnts}:  The set of scheduled events; see below.
-
-   \item \code{reactevnt}:  The reaction function, used-defined; see below.
-
-   \item \code{dbg}:  See \code{mainloop} above.
-
-   \item Application-specific variables.
-
-   }
-}
-
 \section{Reaction Functions}{
 These are user-defined.  The \code{DES} function
 \code{mainloop} will make the call
@@ -149,6 +130,43 @@ queue.
     print results
 }
 
+}
+
+\section{Main Variables}{
+These are in the simlist, whose application-ind
+components are:
+
+   \itemize{
+
+   \item \code{currtime}:  Current simulated time.
+
+   \item \code{evnts}:  The set of scheduled events; see below.
+
+   \item \code{reactevnt}:  The reaction function, used-defined; see below.
+
+   \item \code{dbg}:  See \code{mainloop} above.
+
+   \item Application-specific variables.
+
+   }
+}
+
+\examples{
+# from MachRep.R in examples/ 
+
+# create a sim list that will run for timelim simulated time, with m
+# rows allocated for the event set, and application-specific columns
+# named 'startqtime' and 'startuptime'
+simlist <- newsim(timelim,m,appcols=c('startqtime','startuptime'),dbg=dbg)
+# create a queue
+simlist$queue <- newqueue(simlist)  
+# schedule an event of type simlist$breakevnt, at time whenbreak, with
+# app-specific values NA and 0
+schedevnt(simlist,whenbreak,simlist$breakevnt,appdata=c(NA,0))
+# add the event evnt to the queue simlist$queue
+appendfcfs(simlist$queue,evnt)
+# delete the head of the queue simlist$queue and assign it to qhead
+qhead <- delfcfs(simlist$queue)
 }
 
 \author{
