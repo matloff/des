@@ -132,25 +132,6 @@ queue.
 
 }
 
-\section{Main Variables}{
-These are in the simlist, whose application-ind
-components are:
-
-   \itemize{
-
-   \item \code{currtime}:  Current simulated time.
-
-   \item \code{evnts}:  The set of scheduled events; see below.
-
-   \item \code{reactevnt}:  The reaction function, used-defined; see below.
-
-   \item \code{dbg}:  See \code{mainloop} above.
-
-   \item Application-specific variables.
-
-   }
-}
-
 \examples{
 # from MachRep.R in examples/ 
 
