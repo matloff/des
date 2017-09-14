@@ -1,4 +1,6 @@
 
+import(stats,utils)
+
 export(newsim,schedevnt,getnextevnt,mainloop,
    cancelevnt,appendfcfs,delfcfs,newqueue,exparrivals) 
 

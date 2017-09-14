@@ -30,22 +30,25 @@ exparrivals(simlist,meaninterarr,batchsize = 10000)
 }
 
 \arguments{
+  \item{appcols}{Names of columns in the event set for
+     application-specific data.}
+  \item{aevntset}{If TRUE, \code{exparrivals} will be used for arrivals
+     and an arrivals event set will be maintained.}
   \item{dbg}{If TRUE, use debug mode, action pausing for each new
       event occurrence.}
-  \item{evnt}{An event.}
   \item{simlist}{An R environment containing the simulation, produced by
       \code{newsim}.}
   \item{evnttime}{Occurrence time for an event.}
   \item{evnttype}{Event type.}
+  \item{appdata}{Application-specific data.}
   \item{timelim}{Time limit for simulation.}
   \item{maxesize}{Maximum number of rows needed in the event set matrix,
      excluding separate arrival event rows in the case \code{aevntset} =
      TRUE.  (The matrix can be expanded dynamically if needed.)}
-  \item{x}{Vector to search in.}
-  \item{y}{Value searched for.}
   \item{queue}{A queue.  Must be in a \code{simlist} environment.}
   \item{jobtoqueue}{Job to be placed in a queue.}
-  \item{meaninterarrival}{Mean time between arrivals.}
+  \item{rownum}{Number of the row to be deleted from the event set.}
+  \item{meaninterarr}{Mean time between arrivals.}
   \item{batchsize}{Number of arrivals to generate in one call to
      \code{rexp}.}
 }

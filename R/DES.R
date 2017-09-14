@@ -196,7 +196,7 @@ mainloop <- function(simlist) {
 
 # removes the specified event from the schedule list
 cancelevnt <- function(rownum,simlist) {
-   simlist$evnts[rownnum,1] <- simlist$timelim2
+   simlist$evnts[rownum,1] <- simlist$timelim2
 }
 
 # the work queue functions below assume that queues are represented as
