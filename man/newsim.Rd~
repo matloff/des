@@ -19,7 +19,7 @@ Main simulation routines.
 
 \usage{
 newsim(timelim,maxesize,appcols=NULL,aevntset = FALSE,dbg=FALSE) 
-schedevnt(evnttime,evnttype,simlist,appdata=NULL)
+schedevnt(simlist,evnttime,evnttype,appdata=NULL)
 getnextevnt(simlist)
 mainloop(simlist) 
 newqueue(simlist) 
@@ -32,8 +32,6 @@ exparrivals(simlist,meaninterarr,batchsize = 10000)
 \arguments{
   \item{dbg}{If TRUE, use debug mode, action pausing for each new
       event occurrence.}
-  \item{devsetrows}{Number of rows to allocate initially for the event
-      set.}
   \item{evnt}{An event.}
   \item{simlist}{An R environment containing the simulation, produced by
       \code{newsim}.}
@@ -135,17 +133,12 @@ queue.
 \examples{
 # from MachRep.R in examples/ 
 
-# create a sim list that will run for timelim simulated time, with m
+# create a sim list that will run for 100000 simulated time, with 3
 # rows allocated for the event set, and application-specific columns
 # named 'startqtime' and 'startuptime'
-simlist <- newsim(timelim,m,appcols=c('startqtime','startuptime'),dbg=dbg)
+simlist <- newsim(100000,3,appcols=c('startqtime','startuptime'))
 # create a queue
 simlist$queue <- newqueue(simlist)  
-# schedule an event of type simlist$breakevnt, at time whenbreak, with
-# app-specific values NA and 0
-schedevnt(simlist,whenbreak,simlist$breakevnt,appdata=c(NA,0))
-# add the event evnt to the queue simlist$queue
-appendfcfs(simlist$queue,evnt)
 # delete the head of the queue simlist$queue and assign it to qhead
 qhead <- delfcfs(simlist$queue)
 }

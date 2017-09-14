@@ -139,8 +139,6 @@ queue.
 simlist <- newsim(100000,3,appcols=c('startqtime','startuptime'))
 # create a queue
 simlist$queue <- newqueue(simlist)  
-# delete the head of the queue simlist$queue and assign it to qhead
-qhead <- delfcfs(simlist$queue)
 }
 
 \author{
