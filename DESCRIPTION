@@ -5,6 +5,7 @@ Maintainer: Norm Matloff <normmatloff@gmail.com>
 Date: 2016-1-15
 Title: Discrete Event Simulation
 Description: A DES library for R.
+Depends: stats,utils
 Imports:
 Suggests:
 LazyLoad: no
