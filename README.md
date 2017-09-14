@@ -16,7 +16,7 @@ using our R package **DES** as a running example.
 The R DES package here, **DES**, is not the fastest.  If speed is an
 issue, 
 I recommend the
-[excellent **simmer** package](https://cran.rstudio.com/web/packages/simmer/index.html) 
+[excellent **simmer** package](https://cran.r-project.org/package=simmer) 
 in R, or in Python,
 [**SimPy**](https://simpy.readthedocs.io/en/latest/), on which
 **simmer** is based.  On the other hand, **DES** is much easier to 

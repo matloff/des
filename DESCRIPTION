@@ -4,7 +4,12 @@ Author: Norm Matloff <normmatloff@gmail.com>
 Maintainer: Norm Matloff <normmatloff@gmail.com>
 Date: 2017-9-13
 Title: Discrete Event Simulation
-Description: A DES library for R.
+Description: Discrete event simulation (DES) involves modeling of systems
+   having discrete, i.e. abrupt, state changes. For instance, when a job
+   arrives to a queue, the queue length abruptly increases by 1.  This
+   package is an R implementation of the event-oriented approach to DES;
+   see the tutorial in Matloff (2008) 
+   <http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf>.
 Depends: stats,utils
 Imports:
 Suggests:
